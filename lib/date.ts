@@ -24,3 +24,20 @@ export function toUtcMidnight(input: string | Date): Date {
     ),
   );
 }
+
+/**
+ * Avanza una data di rinnovo al ciclo successivo mantenendo 00:00:00 UTC
+ * (Regola 2): MONTHLY → +1 mese, YEARLY → +1 anno.
+ * Usato dal cron job dei rinnovi.
+ */
+export function advanceRenewalDate(
+  date: Date,
+  cycle: "MONTHLY" | "YEARLY",
+): Date {
+  const y = date.getUTCFullYear();
+  const m = date.getUTCMonth();
+  const d = date.getUTCDate();
+  return cycle === "YEARLY"
+    ? new Date(Date.UTC(y + 1, m, d, 0, 0, 0, 0))
+    : new Date(Date.UTC(y, m + 1, d, 0, 0, 0, 0));
+}
