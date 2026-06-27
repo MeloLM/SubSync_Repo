@@ -11,38 +11,72 @@ dell'applicazione (accuratezza monetaria, gestione date, coerenza della cache).
 ```
 subsync/
 ├── app/
-│   ├── (dashboard)/                # Route group autenticato / area applicativa
-│   │   ├── layout.tsx              # Layout dashboard (sidebar, header KPI)
-│   │   ├── page.tsx                # Dashboard principale (KPI + Burn Rate)
+│   ├── (auth)/                          # Route group pubblico (non autenticato)
+│   │   └── login/page.tsx               # Pagina di login
+│   ├── (dashboard)/                     # Route group autenticato / area applicativa
+│   │   ├── layout.tsx                   # Layout dashboard (sidebar, header KPI)
+│   │   ├── loading.tsx                  # Skeleton di caricamento dashboard
+│   │   ├── error.tsx                    # Error boundary dell'area dashboard
+│   │   ├── page.tsx                     # Dashboard principale (KPI + Burn Rate)
+│   │   ├── profile/page.tsx             # Profilo utente
 │   │   ├── subscriptions/
-│   │   │   ├── page.tsx            # Lista abbonamenti
-│   │   │   └── new/page.tsx        # Form nuovo abbonamento
+│   │   │   ├── page.tsx                 # Lista abbonamenti
+│   │   │   ├── loading.tsx              # Skeleton lista
+│   │   │   ├── new/page.tsx             # Form nuovo abbonamento
+│   │   │   └── [id]/edit/page.tsx       # Form modifica abbonamento
 │   │   └── payments/
-│   │       └── page.tsx            # Storico pagamenti (PaymentLog)
+│   │       ├── page.tsx                 # Storico pagamenti (PaymentLog)
+│   │       └── loading.tsx              # Skeleton storico
 │   ├── api/
-│   │   └── cron/renewals/route.ts  # Endpoint Cron Job rinnovi (test locale)
-│   ├── layout.tsx                  # Root layout
-│   └── globals.css                 # Stili globali Tailwind
+│   │   └── cron/renewals/route.ts       # Endpoint Cron rinnovi (Bearer CRON_SECRET)
+│   ├── auth/
+│   │   └── callback/route.ts            # Callback OAuth/email (exchangeCodeForSession)
+│   ├── layout.tsx                       # Root layout (Toaster, PWA, viewport)
+│   ├── global-error.tsx                 # Error boundary radice
+│   ├── manifest.ts                      # Web App Manifest (PWA)
+│   └── globals.css                      # Stili globali Tailwind
 │
-├── actions/                        # Server Actions (mutazioni + aggregazione)
-│   ├── subscription.actions.ts     # CRUD Abbonamenti
-│   └── burn-rate.actions.ts        # Calcolo Monthly Burn Rate (server-only)
+├── actions/                            # Server Actions ("use server")
+│   ├── auth.actions.ts                  # signIn / signUp / signOut (Supabase)
+│   ├── subscription.actions.ts          # CRUD Abbonamenti (mutazioni)
+│   ├── burn-rate.actions.ts             # Calcolo Monthly Burn Rate (server-only)
+│   └── payment.actions.ts               # Lettura storico pagamenti (DTO)
 │
-├── components/                     # Componenti React riutilizzabili (UI)
-│   ├── ui/                         # Primitive (Button, Card, Input, ...)
-│   ├── kpi/                        # Card KPI della dashboard
-│   └── forms/                      # Form e field
+├── components/                         # Componenti React riutilizzabili (UI)
+│   ├── ui/                              # Primitive (Skeleton, EmptyState)
+│   ├── forms/                           # Form (login, subscription)
+│   ├── subscriptions/                   # Componenti di dominio abbonamenti
+│   └── pwa/                             # Install prompt + registrazione service worker
 │
-├── lib/                            # Utility e client condivisi
-│   ├── prisma.ts                   # Singleton Prisma Client
-│   ├── money.ts                    # Helper Decimal per i calcoli monetari
-│   └── date.ts                     # Helper normalizzazione date UTC
+├── lib/                                # Utility e client condivisi
+│   ├── data/                            # Data-access layer memoizzato (React.cache)
+│   │   ├── subscriptions.ts             # Fetcher abbonamenti (1 SELECT per render)
+│   │   └── payments.ts                  # Fetcher pagamenti
+│   ├── supabase/
+│   │   ├── server.ts                    # Client Supabase server (cookie SSR)
+│   │   └── client.ts                    # Client Supabase browser
+│   ├── auth.ts                          # getCurrentUser / getCurrentUserId (cache)
+│   ├── prisma.ts                        # Singleton Prisma Client
+│   ├── money.ts                         # Helper Decimal per i calcoli monetari
+│   └── date.ts                          # Helper date UTC + advanceRenewalDate
+│
+├── types/
+│   └── index.ts                         # DTO + serializzatori (Decimal/Date → string)
 │
 ├── prisma/
-│   ├── schema.prisma               # Schema del database
-│   └── migrations/                 # Migrazioni generate da Prisma
+│   ├── schema.prisma                    # Schema del database (datasource + modelli)
+│   └── migrations/                      # Migrazioni generate da Prisma
 │
-├── docker-compose.yml              # Servizio PostgreSQL
+├── public/                             # Asset statici + PWA (icone, sw.js, offline.html)
+│
+├── middleware.ts                        # Protezione rotte (redirect a /login se non auth)
+├── vercel.json                          # Schedulazione Vercel Cron (rinnovi)
+├── docker-compose.yml                   # Servizio PostgreSQL (sviluppo locale)
+├── next.config.mjs
+├── tailwind.config.ts                   # Design system "Graphite & Neon"
+├── postcss.config.mjs
+├── tsconfig.json
+├── package.json
 ├── README.md
 ├── TODO.md
 └── ARCHITECTURE.md
