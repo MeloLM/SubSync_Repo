@@ -1,0 +1,50 @@
+// Schema del database SubSync.
+// Regola 1 (ARCHITECTURE.md): gli importi monetari sono Decimal, mai Float.
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL") // runtime: transaction pooler (pgbouncer)
+  directUrl = env("DIRECT_URL")   // migrazioni: session pooler (direct)
+}
+
+enum BillingCycle {
+  MONTHLY
+  YEARLY
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  createdAt     DateTime       @default(now())
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id              String       @id @default(cuid())
+  userId          String
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name            String
+  amount          Decimal      @db.Decimal(12, 2) // Regola 1: Decimal, mai Float
+  currency        String       @default("EUR")
+  billingCycle    BillingCycle
+  nextRenewalDate DateTime // Regola 2: forzata a 00:00:00 UTC pre-salvataggio
+  createdAt       DateTime     @default(now())
+  payments        PaymentLog[]
+
+  @@index([userId])
+}
+
+model PaymentLog {
+  id             String       @id @default(cuid())
+  subscriptionId String
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  amount         Decimal      @db.Decimal(12, 2) // Regola 1
+  paidAt         DateTime     @default(now())
+
+  @@index([subscriptionId])
+}

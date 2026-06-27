@@ -1,0 +1,10 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Dark Mode Native: nessun @media prefers-color-scheme, tema unico scuro. */
+@layer base {
+  body {
+    @apply bg-subsync-bg text-zinc-300 antialiased;
+  }
+}

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>SubSync — Offline</title>
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 1.5rem;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        background: #18181b;
+        color: #d4d4d8;
+      }
+      .card {
+        max-width: 26rem;
+        text-align: center;
+        border: 1px solid #27272a;
+        background: #27272a;
+        border-radius: 1rem;
+        padding: 2rem;
+      }
+      .badge {
+        width: 3rem; height: 3rem; margin: 0 auto 1rem;
+        display: grid; place-items: center;
+        border-radius: 9999px;
+        background: linear-gradient(135deg, #8b5cf6, #06b6d4);
+        color: #ffffff;
+        font-size: 1.5rem; font-weight: 700;
+      }
+      h1 { font-size: 1.125rem; margin: 0 0 .25rem; color: #ffffff; }
+      p { color: #a1a1aa; font-size: .875rem; margin: 0 0 1.5rem; }
+      button {
+        cursor: pointer;
+        border: 0; border-radius: .5rem;
+        padding: .6rem 1.1rem;
+        font-size: .875rem; font-weight: 500;
+        color: #ffffff;
+        background: #8b5cf6;
+      }
+      button:hover { background: #7c3aed; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="badge">⬡</div>
+      <h1>Sei offline</h1>
+      <p>Impossibile raggiungere SubSync. Controlla la connessione e riprova: i dati torneranno appena sarai di nuovo online.</p>
+      <button onclick="location.reload()">Riprova</button>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,6 @@
+# Autorizza l'esecuzione degli install-script (postinstall) dei pacchetti Prisma.
+# Senza, pnpm 11 solleva ERR_PNPM_IGNORED_BUILDS.
+allowBuilds:
+  '@prisma/client': true
+  '@prisma/engines': true
+  prisma: true
