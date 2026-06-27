@@ -1,7 +1,7 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/auth";
+import { getPaymentsByUser } from "@/lib/data/payments";
 
 /**
  * Riga pagamento per la UI (timeline). DTO serializzabile: `amount` Decimal →
@@ -16,11 +16,7 @@ export interface PaymentRowDTO {
 
 export async function listPayments(): Promise<PaymentRowDTO[]> {
   const userId = await getCurrentUserId();
-  const payments = await prisma.paymentLog.findMany({
-    where: { subscription: { userId } },
-    orderBy: { paidAt: "desc" },
-    include: { subscription: { select: { name: true } } },
-  });
+  const payments = await getPaymentsByUser(userId);
 
   return payments.map((p) => ({
     id: p.id,

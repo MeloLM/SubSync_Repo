@@ -7,6 +7,10 @@ import { prisma } from "@/lib/prisma";
 import { money } from "@/lib/money";
 import { toUtcMidnight } from "@/lib/date";
 import { getCurrentUser, getCurrentUserId } from "@/lib/auth";
+import {
+  getSubscriptionsByUser,
+  getSubscriptionByIdForUser,
+} from "@/lib/data/subscriptions";
 import { toSubscriptionDTO, type SubscriptionDTO } from "@/types";
 
 export interface SubscriptionInput {
@@ -27,19 +31,15 @@ function revalidateSubscriptionViews() {
 
 export async function listSubscriptions(): Promise<SubscriptionDTO[]> {
   const userId = await getCurrentUserId();
-  const subscriptions = await prisma.subscription.findMany({
-    where: { userId },
-    orderBy: { nextRenewalDate: "asc" },
-  });
+  // Fetcher memoizzato (React.cache): condiviso con getMonthlyBurnRate → 1 SELECT.
+  const subscriptions = await getSubscriptionsByUser(userId);
   return subscriptions.map(toSubscriptionDTO);
 }
 
 /** Singolo abbonamento dell'utente corrente (per il form di modifica). */
 export async function getSubscription(id: string): Promise<SubscriptionDTO | null> {
   const userId = await getCurrentUserId();
-  const subscription = await prisma.subscription.findFirst({
-    where: { id, userId }, // scoping all'utente: niente accesso a record altrui
-  });
+  const subscription = await getSubscriptionByIdForUser(id, userId);
   return subscription ? toSubscriptionDTO(subscription) : null;
 }
 
