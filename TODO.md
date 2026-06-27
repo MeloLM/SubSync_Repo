@@ -3,7 +3,7 @@
 | Metadato         | Valore                                                                 |
 | ---------------- | ---------------------------------------------------------------------- |
 | **Last Updated** | 2026-06-27                                                             |
-| **Status**       | 🟠 Sprint 3 in corso — **PWA core completo** (manifest, icone 192/512+maskable, SW + offline, meta iOS/Android, install prompt); build di produzione OK su :3001. Restano: cache viste read-only + audit Lighthouse. |
+| **Status**       | 🟠 Sprint 4 in corso — **Cron rinnovi operativo** (`/api/cron/renewals`: auth `CRON_SECRET`, avanzamento date UTC, `PaymentLog`, idempotente, `vercel.json`); testato sul DB Supabase. Pendenti: Email Ingestion (scelta provider) + residui Sprint 3 (cache read-only, Lighthouse). |
 | **Goal**         | Tracciare gli abbonamenti e calcolare il **Monthly Burn Rate** normalizzato, con importi monetari accurati (Decimal) e date timezone-safe (00:00:00 UTC). |
 | **Pipeline**     | 6 Sprint a granularità fine — micro-cicli specializzati per prevenire il degrado del contesto. |
 
@@ -104,12 +104,12 @@
 - [ ] Matching automatico ricevuta → `Subscription` esistente
 
 ### ⏰ Cron Job rinnovi
-- [ ] Endpoint locale di test `/api/cron/renewals` (route handler)
-- [ ] 🔐 Protezione endpoint con `CRON_SECRET` (header autorizzazione)
-- [ ] Configurazione **Vercel Cron** (`vercel.json`, schedule giornaliero)
-- [ ] ⚠️ Avanzamento `nextRenewalDate` a rinnovo avvenuto (sempre 00:00:00 UTC)
-- [ ] Creazione `PaymentLog` automatica al rinnovo + ♻️ `revalidatePath`
-- [ ] Idempotenza (no doppi log sullo stesso ciclo)
+- [x] Endpoint locale di test `/api/cron/renewals` (route handler) — testato (401/200)
+- [x] 🔐 Protezione endpoint con `CRON_SECRET` (header `Authorization: Bearer`)
+- [x] Configurazione **Vercel Cron** (`vercel.json`, schedule giornaliero `0 6 * * *`)
+- [x] ⚠️ Avanzamento `nextRenewalDate` a rinnovo avvenuto (sempre 00:00:00 UTC, `advanceRenewalDate`)
+- [x] Creazione `PaymentLog` automatica al rinnovo + ♻️ `revalidatePath`
+- [x] Idempotenza (no doppi log sullo stesso ciclo) — verificata su DB reale
 
 ---
 
