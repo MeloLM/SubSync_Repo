@@ -2,8 +2,8 @@
 
 | Metadato         | Valore                                                                 |
 | ---------------- | ---------------------------------------------------------------------- |
-| **Last Updated** | 2026-06-27                                                             |
-| **Status**       | 🟠 Sprint 4 in corso — **Cron rinnovi operativo** (`/api/cron/renewals`: auth `CRON_SECRET`, avanzamento date UTC, `PaymentLog`, idempotente, `vercel.json`); testato sul DB Supabase. Pendenti: Email Ingestion (scelta provider) + residui Sprint 3 (cache read-only, Lighthouse). |
+| **Last Updated** | 2026-06-28                                                             |
+| **Status**       | 🟡 Sprint 5 in corso — **Split-Billing operativo** (`SubscriptionMember`: inviti via account reali, ripartizione Decimal `splitByWeights`, settlement; UI proprietario `/subscriptions/[id]/split` + invitato `/shared`). Pendenti: blocco Fiscalità & Ottimizzazione (deducibilità, suggeritore switch via `altCyclePrice`, multi-valuta via FX API live). Code: cron rinnovi (S4); residui S3/S4 (Email Ingestion, cache read-only, Lighthouse). |
 | **Goal**         | Tracciare gli abbonamenti e calcolare il **Monthly Burn Rate** normalizzato, con importi monetari accurati (Decimal) e date timezone-safe (00:00:00 UTC). |
 | **Pipeline**     | 6 Sprint a granularità fine — micro-cicli specializzati per prevenire il degrado del contesto. |
 
@@ -113,19 +113,20 @@
 
 ---
 
-## 🟢 SPRINT 5 — Enterprise & B2B Features
+## 🟡 SPRINT 5 — Enterprise & B2B Features
 
 > 🟢 Feature ad alto valore aggiunto che differenziano il prodotto (post-MVP).
 
-### Split-Billing
-- [ ] Modello dati condivisione spese tra utenti (quote/membri)
-- [ ] Algoritmo di ripartizione importi — ⚠️ aritmetica interamente in **Decimal**
-- [ ] Vista "chi deve cosa" + stato di settlement
+### Split-Billing `[COMPLETATO]`
+- [x] Modello dati condivisione spese tra utenti (quote/membri) — `SubscriptionMember` (account reali + inviti via email, enum `InviteStatus`, `shareWeight` Decimal, settlement)
+- [x] Algoritmo di ripartizione importi — ⚠️ `splitByWeights` interamente in **Decimal**, somma esatta col resto in centesimi (metodo del resto maggiore); proprietario implicito a peso 1 (`lib/split.ts`)
+- [x] Vista "chi deve cosa" + stato di settlement — proprietario: `/subscriptions/[id]/split`; invitato: `/shared` (inviti accetta/rifiuta + condivisi con me) + badge inviti in sidebar
+- _Nota: il Monthly Burn Rate resta sul costo degli abbonamenti posseduti (Regola 4 invariata in questo pass)._
 
 ### Fiscalità & Ottimizzazione
 - [ ] Modulo **deducibilità fiscale** per freelance / Partita IVA
-- [ ] **Suggeritore switch** mensile → annuale quando conviene (calcolo risparmio in Decimal)
-- [ ] Normalizzazione multi-valuta per aggregazioni cross-currency
+- [ ] **Suggeritore switch** mensile → annuale quando conviene (calcolo risparmio in Decimal) — _design scelto: campo `altCyclePrice` opzionale sulla Subscription_
+- [ ] Normalizzazione multi-valuta per aggregazioni cross-currency — _design scelto: API di cambio live + caching_
 
 ---
 

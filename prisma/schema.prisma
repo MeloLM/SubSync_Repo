@@ -17,11 +17,19 @@ enum BillingCycle {
   YEARLY
 }
 
+// Stato di un invito alla condivisione di un abbonamento (Split-Billing, Sprint 5).
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
 model User {
-  id            String         @id @default(cuid())
-  email         String         @unique
-  createdAt     DateTime       @default(now())
+  id            String               @id @default(cuid())
+  email         String               @unique
+  createdAt     DateTime             @default(now())
   subscriptions Subscription[]
+  memberships   SubscriptionMember[] // Abbonamenti condivisi con questo utente
 }
 
 model Subscription {
@@ -35,8 +43,36 @@ model Subscription {
   nextRenewalDate DateTime // Regola 2: forzata a 00:00:00 UTC pre-salvataggio
   createdAt       DateTime     @default(now())
   payments        PaymentLog[]
+  members         SubscriptionMember[] // Split-Billing: partecipanti invitati
 
   @@index([userId])
+}
+
+// Split-Billing (Sprint 5): un partecipante invitato a dividere il costo di un
+// abbonamento. Il proprietario (Subscription.user) partecipa implicitamente con
+// peso 1; i membri qui elencati ricevono un invito e, una volta accettato, sono
+// legati al loro account (`userId`) e vedono l'abbonamento condiviso.
+model SubscriptionMember {
+  id             String       @id @default(cuid())
+  subscriptionId String
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  // Account dell'invitato: null finché l'invito non viene accettato.
+  userId         String?
+  user           User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  // Email dell'invito: usata per il matching invito → account al login.
+  email          String
+  status         InviteStatus @default(PENDING)
+  // Peso della quota (Regola 1: Decimal). Default 1 = parti uguali col proprietario.
+  shareWeight    Decimal      @default(1) @db.Decimal(12, 4)
+  // Settlement: la quota dovuta è stata saldata al proprietario?
+  settled        Boolean      @default(false)
+  settledAt      DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@unique([subscriptionId, email])
+  @@index([subscriptionId])
+  @@index([userId])
+  @@index([email])
 }
 
 model PaymentLog {

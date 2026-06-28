@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CreditCard, Pencil, Plus } from "lucide-react";
+import { CreditCard, Pencil, Plus, Users } from "lucide-react";
 
 import { listSubscriptions } from "@/actions/subscription.actions";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -91,6 +91,13 @@ export default async function SubscriptionsPage() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-1">
+                        <Link
+                          href={`/subscriptions/${s.id}/split`}
+                          aria-label={`Condividi ${s.name}`}
+                          className="grid h-8 w-8 place-items-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white"
+                        >
+                          <Users className="h-4 w-4" />
+                        </Link>
                         <Link
                           href={`/subscriptions/${s.id}/edit`}
                           aria-label={`Modifica ${s.name}`}

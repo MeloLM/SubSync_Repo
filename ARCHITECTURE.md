@@ -23,7 +23,9 @@ subsync/
 │   │   │   ├── page.tsx                 # Lista abbonamenti
 │   │   │   ├── loading.tsx              # Skeleton lista
 │   │   │   ├── new/page.tsx             # Form nuovo abbonamento
-│   │   │   └── [id]/edit/page.tsx       # Form modifica abbonamento
+│   │   │   ├── [id]/edit/page.tsx       # Form modifica abbonamento
+│   │   │   └── [id]/split/page.tsx      # Split-Billing: gestione condivisione (proprietario)
+│   │   ├── shared/page.tsx              # Split-Billing: inviti + condivisi con me (invitato)
 │   │   └── payments/
 │   │       ├── page.tsx                 # Storico pagamenti (PaymentLog)
 │   │       └── loading.tsx              # Skeleton storico
@@ -40,24 +42,28 @@ subsync/
 │   ├── auth.actions.ts                  # signIn / signUp / signOut (Supabase)
 │   ├── subscription.actions.ts          # CRUD Abbonamenti (mutazioni)
 │   ├── burn-rate.actions.ts             # Calcolo Monthly Burn Rate (server-only)
-│   └── payment.actions.ts               # Lettura storico pagamenti (DTO)
+│   ├── payment.actions.ts               # Lettura storico pagamenti (DTO)
+│   └── split.actions.ts                 # Split-Billing: inviti, quote, settlement (DTO)
 │
 ├── components/                         # Componenti React riutilizzabili (UI)
 │   ├── ui/                              # Primitive (Skeleton, EmptyState)
 │   ├── forms/                           # Form (login, subscription)
 │   ├── subscriptions/                   # Componenti di dominio abbonamenti
+│   ├── split/                           # Split-Billing (invito, riga membro, risposta invito)
 │   └── pwa/                             # Install prompt + registrazione service worker
 │
 ├── lib/                                # Utility e client condivisi
 │   ├── data/                            # Data-access layer memoizzato (React.cache)
 │   │   ├── subscriptions.ts             # Fetcher abbonamenti (1 SELECT per render)
-│   │   └── payments.ts                  # Fetcher pagamenti
+│   │   ├── payments.ts                  # Fetcher pagamenti
+│   │   └── members.ts                   # Fetcher membri/inviti Split-Billing
 │   ├── supabase/
 │   │   ├── server.ts                    # Client Supabase server (cookie SSR)
 │   │   └── client.ts                    # Client Supabase browser
 │   ├── auth.ts                          # getCurrentUser / getCurrentUserId (cache)
 │   ├── prisma.ts                        # Singleton Prisma Client
-│   ├── money.ts                         # Helper Decimal per i calcoli monetari
+│   ├── money.ts                         # Helper Decimal (money, splitByWeights, formatMoney)
+│   ├── split.ts                         # Logica ripartizione quote Split-Billing (Decimal)
 │   └── date.ts                          # Helper date UTC + advanceRenewalDate
 │
 ├── types/

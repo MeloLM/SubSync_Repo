@@ -1,12 +1,14 @@
 import Link from "next/link";
-import { CreditCard, LayoutDashboard, Receipt } from "lucide-react";
+import { CreditCard, LayoutDashboard, Receipt, Users2 } from "lucide-react";
 
 import { getCurrentUser } from "@/lib/auth";
+import { countPendingInvites } from "@/actions/split.actions";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/subscriptions", label: "Abbonamenti", icon: CreditCard },
   { href: "/payments", label: "Pagamenti", icon: Receipt },
+  { href: "/shared", label: "Condivisi", icon: Users2 },
 ];
 
 export default async function DashboardLayout({
@@ -17,6 +19,7 @@ export default async function DashboardLayout({
   const user = await getCurrentUser();
   const email = user.email ?? "utente";
   const initial = email.charAt(0).toUpperCase();
+  const pendingInvites = await countPendingInvites();
 
   return (
     <div className="flex min-h-screen">
@@ -34,6 +37,11 @@ export default async function DashboardLayout({
             >
               <Icon className="h-4 w-4" />
               {label}
+              {href === "/shared" && pendingInvites > 0 && (
+                <span className="ml-auto grid h-5 min-w-5 place-items-center rounded-full bg-subsync-purple px-1.5 text-xs font-bold text-white">
+                  {pendingInvites}
+                </span>
+              )}
             </Link>
           ))}
         </nav>
