@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
+import { forwardRef, useImperativeHandle, useState, useTransition } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -10,6 +10,7 @@ import {
   createSubscription,
   updateSubscription,
 } from "@/actions/subscription.actions";
+import type { ReceiptExtraction } from "@/actions/vision.actions";
 import type { BillingCycle } from "@/lib/generated/prisma";
 import type { SubscriptionDTO } from "@/types";
 
@@ -18,25 +19,62 @@ const inputCls =
 const labelCls =
   "mb-1.5 block text-xs font-medium uppercase tracking-wide text-zinc-400";
 
+/** Handle imperativo esposto via ref: consente l'auto-fill esterno dei campi. */
+export interface SubscriptionFormHandle {
+  /** Sovrascrive istantaneamente i campi con i dati estratti da una ricevuta. */
+  applyExtraction: (data: ReceiptExtraction) => void;
+}
+
 /**
  * Form abbonamento — gestisce sia creazione che modifica.
  * Se `initial` è presente → modalità edit (chiama `updateSubscription`),
  * altrimenti creazione (`createSubscription`).
+ *
+ * I campi sono controllati per permettere l'auto-fill imperativo via
+ * `ref.applyExtraction` (AI Receipt Scanner), analogo a `setValue` di RHF.
  */
-export function SubscriptionForm({ initial }: { initial?: SubscriptionDTO }) {
+export const SubscriptionForm = forwardRef<
+  SubscriptionFormHandle,
+  { initial?: SubscriptionDTO }
+>(function SubscriptionForm({ initial }, ref) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const isEdit = Boolean(initial);
 
+  const [name, setName] = useState(initial?.name ?? "");
+  const [amount, setAmount] = useState(initial?.amount ?? "");
+  const [currency, setCurrency] = useState(initial?.currency ?? "EUR");
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>(
+    initial?.billingCycle ?? "MONTHLY",
+  );
+  const [nextRenewalDate, setNextRenewalDate] = useState(
+    initial?.nextRenewalDate.slice(0, 10) ?? "",
+  );
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      applyExtraction: (data) => {
+        setName(data.name);
+        setAmount(String(data.amount));
+        // Il <select> conosce solo EUR/USD: applica la valuta solo se supportata.
+        if (data.currency === "EUR" || data.currency === "USD") {
+          setCurrency(data.currency);
+        }
+        setBillingCycle(data.billingCycle === "YEARLY" ? "YEARLY" : "MONTHLY");
+      },
+    }),
+    [],
+  );
+
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const fd = new FormData(e.currentTarget);
     const input = {
-      name: String(fd.get("name") ?? "").trim(),
-      amount: String(fd.get("amount") ?? "0"),
-      currency: String(fd.get("currency") ?? "EUR"),
-      billingCycle: String(fd.get("billingCycle")) as BillingCycle,
-      nextRenewalDate: String(fd.get("nextRenewalDate") ?? ""),
+      name: name.trim(),
+      amount: String(amount || "0"),
+      currency,
+      billingCycle,
+      nextRenewalDate,
     };
 
     startTransition(async () => {
@@ -70,7 +108,8 @@ export function SubscriptionForm({ initial }: { initial?: SubscriptionDTO }) {
           id="name"
           name="name"
           required
-          defaultValue={initial?.name}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
           placeholder="Es. Netflix"
           className={inputCls}
         />
@@ -88,7 +127,8 @@ export function SubscriptionForm({ initial }: { initial?: SubscriptionDTO }) {
             step="0.01"
             min="0"
             required
-            defaultValue={initial?.amount}
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
             placeholder="0.00"
             className={inputCls}
           />
@@ -100,7 +140,8 @@ export function SubscriptionForm({ initial }: { initial?: SubscriptionDTO }) {
           <select
             id="currency"
             name="currency"
-            defaultValue={initial?.currency ?? "EUR"}
+            value={currency}
+            onChange={(e) => setCurrency(e.target.value)}
             className={inputCls}
           >
             <option value="EUR">EUR</option>
@@ -117,7 +158,8 @@ export function SubscriptionForm({ initial }: { initial?: SubscriptionDTO }) {
           <select
             id="billingCycle"
             name="billingCycle"
-            defaultValue={initial?.billingCycle ?? "MONTHLY"}
+            value={billingCycle}
+            onChange={(e) => setBillingCycle(e.target.value as BillingCycle)}
             className={inputCls}
           >
             <option value="MONTHLY">Mensile</option>
@@ -133,7 +175,8 @@ export function SubscriptionForm({ initial }: { initial?: SubscriptionDTO }) {
             name="nextRenewalDate"
             type="date"
             required
-            defaultValue={initial?.nextRenewalDate.slice(0, 10)}
+            value={nextRenewalDate}
+            onChange={(e) => setNextRenewalDate(e.target.value)}
             className={`${inputCls} [color-scheme:dark]`}
           />
         </div>
@@ -161,4 +204,4 @@ export function SubscriptionForm({ initial }: { initial?: SubscriptionDTO }) {
       </div>
     </form>
   );
-}
+});

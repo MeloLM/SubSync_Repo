@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
-import { SubscriptionForm } from "@/components/forms/subscription-form";
+import { SubscriptionScannerForm } from "@/components/subscriptions/subscription-scanner-form";
 
 export default function NewSubscriptionPage() {
   return (
@@ -17,12 +17,11 @@ export default function NewSubscriptionPage() {
         Nuovo abbonamento
       </h1>
       <p className="mb-6 text-sm text-zinc-400">
-        Aggiungi un servizio e tieni traccia del costo mensile.
+        Carica una fattura per la compilazione automatica, oppure inserisci il
+        servizio manualmente.
       </p>
 
-      <div className="rounded-2xl border border-zinc-800 bg-subsync-card p-6 shadow-sm">
-        <SubscriptionForm />
-      </div>
+      <SubscriptionScannerForm />
     </div>
   );
 }

@@ -2,8 +2,8 @@
 
 | Metadato         | Valore                                                                 |
 | ---------------- | ---------------------------------------------------------------------- |
-| **Last Updated** | 2026-06-28                                                             |
-| **Status**       | 🟡 Sprint 5 in corso — **Split-Billing operativo** (`SubscriptionMember`: inviti via account reali, ripartizione Decimal `splitByWeights`, settlement; UI proprietario `/subscriptions/[id]/split` + invitato `/shared`). Pendenti: blocco Fiscalità & Ottimizzazione (deducibilità, suggeritore switch via `altCyclePrice`, multi-valuta via FX API live). Code: cron rinnovi (S4); residui S3/S4 (Email Ingestion, cache read-only, Lighthouse). |
+| **Last Updated** | 2026-07-07                                                             |
+| **Status**       | 🟡 Sprint 5 in corso — **Split-Billing operativo** (`SubscriptionMember`: inviti via account reali, ripartizione Decimal `splitByWeights`, settlement; UI proprietario `/subscriptions/[id]/split` + invitato `/shared`). Pendenti: blocco Fiscalità & Ottimizzazione (deducibilità, suggeritore switch via `altCyclePrice`, multi-valuta via FX API live). Code: cron rinnovi (S4); residui S3/S4 (Email Ingestion, cache read-only, Lighthouse). ✅ **AI Receipt Scanner** (S4) completo: Gemini `gemini-1.5-flash` via `@google/genai` + auto-fill del form — manca solo la `GEMINI_API_KEY` reale per il test funzionale. |
 | **Goal**         | Tracciare gli abbonamenti e calcolare il **Monthly Burn Rate** normalizzato, con importi monetari accurati (Decimal) e date timezone-safe (00:00:00 UTC). |
 | **Pipeline**     | 6 Sprint a granularità fine — micro-cicli specializzati per prevenire il degrado del contesto. |
 
@@ -110,6 +110,12 @@
 - [x] ⚠️ Avanzamento `nextRenewalDate` a rinnovo avvenuto (sempre 00:00:00 UTC, `advanceRenewalDate`)
 - [x] Creazione `PaymentLog` automatica al rinnovo + ♻️ `revalidatePath`
 - [x] Idempotenza (no doppi log sullo stesso ciclo) — verificata su DB reale
+
+### 👁️ AI Receipt Scanner (Vision API) `[COMPLETATO]`
+- [x] Integrazione UI: Dropzone (`react-dropzone`) nel form `/subscriptions/new` — componente `image-scanner` + wrapper `subscription-scanner-form`.
+- [x] Server Action: `actions/vision.actions.ts` — SDK ufficiale **Google Gemini** (`@google/genai`, modello `gemini-1.5-flash`), immagine via `inlineData`; chiave da `GEMINI_API_KEY`.
+- [x] Prompt Engineering: `systemInstruction` + output vincolato con `responseMimeType: application/json` e `responseSchema` (JSON Schema rigoroso) → `{ name, amount, currency, billingCycle }`.
+- [x] Auto-fill: JSON cablato ai campi del form via handle imperativo (`setValue`-like su form controllato); toast "Fattura analizzata! Controlla i dati prima di salvare."
 
 ---
 

@@ -1,6 +1,10 @@
-# Autorizza l'esecuzione degli install-script (postinstall) dei pacchetti Prisma.
-# Senza, pnpm 11 solleva ERR_PNPM_IGNORED_BUILDS.
+# Autorizza l'esecuzione degli install-script (postinstall) dei pacchetti che ne
+# hanno bisogno. Senza, pnpm 11 solleva ERR_PNPM_IGNORED_BUILDS al primo install/run.
+# `unrs-resolver` arriva da eslint-config-next; `@google/genai`/`protobufjs` dallo SDK Gemini.
 allowBuilds:
+  '@google/genai': true
   '@prisma/client': true
   '@prisma/engines': true
   prisma: true
+  protobufjs: true
+  unrs-resolver: true

@@ -43,11 +43,15 @@ subsync/
 │   ├── subscription.actions.ts          # CRUD Abbonamenti (mutazioni)
 │   ├── burn-rate.actions.ts             # Calcolo Monthly Burn Rate (server-only)
 │   ├── payment.actions.ts               # Lettura storico pagamenti (DTO)
-│   └── split.actions.ts                 # Split-Billing: inviti, quote, settlement (DTO)
+│   ├── split.actions.ts                 # Split-Billing: inviti, quote, settlement (DTO)
+│   └── vision.actions.ts                # Server Action per estrazione dati via Gemini
 │
 ├── components/                         # Componenti React riutilizzabili (UI)
 │   ├── ui/                              # Primitive (Skeleton, EmptyState)
-│   ├── forms/                           # Form (login, subscription)
+│   ├── forms/                           # Form applicativi
+│   │   ├── login-form.tsx               # Form login/signup
+│   │   ├── subscription-form.tsx        # Form abbonamento (create/edit, auto-fill)
+│   │   └── image-scanner.tsx            # Dropzone per upload ricevute
 │   ├── subscriptions/                   # Componenti di dominio abbonamenti
 │   ├── split/                           # Split-Billing (invito, riga membro, risposta invito)
 │   └── pwa/                             # Install prompt + registrazione service worker
@@ -164,3 +168,10 @@ User (1) ──────< (N) Subscription (1) ──────< (N) Paymen
 | `subscriptionId` | String      | FK → Subscription             |
 | `amount`         | **Decimal** | Importo pagato (Regola 1)     |
 | `paidAt`         | DateTime    | Data pagamento (UTC)          |
+
+---
+
+## Direttive Operative per l'Agente
+
+- **[REGOLA DI VALIDAZIONE]**: Al termine di ogni modifica, non avviare 'pnpm dev'. Esegui obbligatoriamente 'pnpm build'. Se la build fallisce (max 2 tentativi), ferma tutto e scrivi l'errore nel TODO.md sotto "Errors to fix".
+- **[LOG DI CONFERMA]**: Alla fine di ogni intervento, genera un report testuale con: esito validazione, file modificati, e prossima task logica in coda.
