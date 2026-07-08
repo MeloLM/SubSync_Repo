@@ -62,6 +62,10 @@ export const SubscriptionForm = forwardRef<
           setCurrency(data.currency);
         }
         setBillingCycle(data.billingCycle === "YEARLY" ? "YEARLY" : "MONTHLY");
+        // Popola la data solo se valida (YYYY-MM-DD), altrimenti lascia il campo.
+        if (data.nextRenewalDate) {
+          setNextRenewalDate(data.nextRenewalDate);
+        }
       },
     }),
     [],

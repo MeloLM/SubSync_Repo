@@ -13,6 +13,8 @@ export interface ReceiptExtraction {
   amount: number;
   currency: string;
   billingCycle: BillingCycle;
+  /** Prossimo rinnovo in formato ISO 8601 "YYYY-MM-DD" (vuoto se non deducibile). */
+  nextRenewalDate: string;
 }
 
 /**
@@ -26,8 +28,12 @@ const RECEIPT_SCHEMA = {
     amount: { type: Type.NUMBER },
     currency: { type: Type.STRING },
     billingCycle: { type: Type.STRING, enum: ["MONTHLY", "YEARLY"] },
+    nextRenewalDate: {
+      type: Type.STRING,
+      description: "Data del prossimo rinnovo in formato YYYY-MM-DD",
+    },
   },
-  required: ["name", "amount", "currency", "billingCycle"],
+  required: ["name", "amount", "currency", "billingCycle", "nextRenewalDate"],
 };
 
 const SYSTEM_INSTRUCTION =
@@ -36,6 +42,11 @@ const SYSTEM_INSTRUCTION =
   "come numero senza simboli (amount), la valuta in codice ISO-4217 (currency, es. " +
   "EUR o USD) e il ciclo di fatturazione (billingCycle: MONTHLY se mensile, YEARLY " +
   "se annuale; usa MONTHLY se non è indicato). " +
+  "Estrai anche la data del prossimo rinnovo (nextRenewalDate). Cerca la data di " +
+  "fine del periodo di fatturazione (es. se vedi 'Jun 21-Jul 21, 2026', il prossimo " +
+  "rinnovo è '2026-07-21'). Se vedi solo la data di pagamento, calcola il rinnovo " +
+  "aggiungendo 1 mese o 1 anno in base al ciclo. Restituisci TASSATIVAMENTE la data " +
+  "nel formato ISO 8601 'YYYY-MM-DD'. " +
   "Rispondi esclusivamente con l'oggetto JSON conforme allo schema.";
 
 /** Estrae `mimeType` + base64 puro sia da un data URL sia da base64 grezzo. */
@@ -48,7 +59,7 @@ function parseImagePayload(input: string): { mimeType: string; data: string } {
 
 /**
  * 👁️ Estrae i dati dell'abbonamento da un'immagine (scontrino/fattura) tramite
- * Google Gemini (`gemini-1.5-flash`). L'output è vincolato via `responseSchema`
+ * Google Gemini (`gemini-2.5-flash`). L'output è vincolato via `responseSchema`
  * così da alimentare direttamente l'auto-fill del form.
  *
  * Richiede `GEMINI_API_KEY` in `.env.local` (server-only).
@@ -71,7 +82,7 @@ export async function extractDataFromReceipt(
   const ai = new GoogleGenAI({ apiKey });
 
   const response = await ai.models.generateContent({
-    model: "gemini-1.5-flash",
+    model: "gemini-2.5-flash",
     contents: [
       {
         role: "user",
@@ -104,10 +115,16 @@ export async function extractDataFromReceipt(
   const billingCycle: BillingCycle =
     parsed.billingCycle === "YEARLY" ? "YEARLY" : "MONTHLY";
 
+  // Accetta solo un YYYY-MM-DD valido (compatibile con <input type="date">),
+  // altrimenti stringa vuota così il form non riceve una data malformata.
+  const rawDate = String(parsed.nextRenewalDate ?? "").trim();
+  const nextRenewalDate = /^\d{4}-\d{2}-\d{2}$/.test(rawDate) ? rawDate : "";
+
   return {
     name: String(parsed.name ?? "").trim(),
     amount: Number(parsed.amount ?? 0),
     currency: String(parsed.currency ?? "EUR").trim().toUpperCase(),
     billingCycle,
+    nextRenewalDate,
   };
 }
