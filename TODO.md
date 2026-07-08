@@ -2,8 +2,8 @@
 
 | Metadato         | Valore                                                                 |
 | ---------------- | ---------------------------------------------------------------------- |
-| **Last Updated** | 2026-07-07                                                             |
-| **Status**       | 🟡 Sprint 5 in corso — **Split-Billing operativo** (`SubscriptionMember`: inviti via account reali, ripartizione Decimal `splitByWeights`, settlement; UI proprietario `/subscriptions/[id]/split` + invitato `/shared`). Pendenti: blocco Fiscalità & Ottimizzazione (deducibilità, suggeritore switch via `altCyclePrice`, multi-valuta via FX API live). Code: cron rinnovi (S4); residui S3/S4 (Email Ingestion, cache read-only, Lighthouse). ✅ **AI Receipt Scanner** (S4) completo: Gemini `gemini-1.5-flash` via `@google/genai` + auto-fill del form — manca solo la `GEMINI_API_KEY` reale per il test funzionale. |
+| **Last Updated** | 2026-07-08                                                             |
+| **Status**       | 🚀 **Sprint 6 — Deploy in corso**: app in fase di configurazione su Vercel. Migrazioni Prisma automatizzate nel ciclo di build Vercel (`build` = `prisma generate && prisma migrate deploy && next build`, applicate via `DIRECT_URL`); variabili d'ambiente di produzione + `vercel.json` configurati. Completati: **Split-Billing** (S5), **AI Receipt Scanner** (S4, Gemini `gemini-2.5-flash` via `@google/genai` + auto-fill). Pendenti S6: CI GitHub Actions (lint/typecheck/test), smoke test post-deploy. Backlog: Fiscalità & Ottimizzazione (S5), Email Ingestion (S4). |
 | **Goal**         | Tracciare gli abbonamenti e calcolare il **Monthly Burn Rate** normalizzato, con importi monetari accurati (Decimal) e date timezone-safe (00:00:00 UTC). |
 | **Pipeline**     | 6 Sprint a granularità fine — micro-cicli specializzati per prevenire il degrado del contesto. |
 
@@ -146,9 +146,9 @@
 - [ ] Setup test (unit/integration) sugli helper critici (`money`, `date`, Burn Rate)
 
 ### Deploy
-- [ ] Configurazione **variabili d'ambiente di produzione** (DB, Supabase, `CRON_SECRET`)
-- [ ] **Vercel Deployment configuration** (`vercel.json`, build & env)
-- [ ] `prisma migrate deploy` nel flusso di rilascio
+- [x] Configurazione **variabili d'ambiente di produzione** (DB, Supabase, `CRON_SECRET`)
+- [x] **Vercel Deployment configuration** (`vercel.json`, build & env)
+- [x] `prisma migrate deploy` nel flusso di rilascio — inserito nello script `build` (gira su Vercel prima di `next build`, via `DIRECT_URL`)
 - [ ] Smoke test post-deploy + monitoraggio errori
 
 ---
