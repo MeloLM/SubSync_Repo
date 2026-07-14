@@ -36,6 +36,21 @@ export interface BurnRateDTO {
   subscriptionCount: number;
 }
 
+/** Un mese della serie "Trend di spesa" (aggregato dai PaymentLog, Regola 4). */
+export interface SpendingTrendPoint {
+  monthKey: string; // "YYYY-MM" (UTC) — chiave stabile / React key
+  monthLabel: string; // etichetta breve asse-x, es. "lug" (it-IT, UTC)
+  fullLabel: string; // etichetta estesa tooltip/aria, es. "luglio 2026" (it-IT, UTC)
+  total: string; // totale del mese, Prisma.Decimal → stringa a 2 decimali (Regola 1)
+}
+
+export interface SpendingTrendDTO {
+  currency: string;
+  windowMonths: number;
+  total: string; // Σ della finestra, Prisma.Decimal → stringa
+  points: SpendingTrendPoint[];
+}
+
 /** Mapper Prisma → DTO. Usare nelle Server Actions prima di passare le props. */
 export function toSubscriptionDTO(s: Subscription): SubscriptionDTO {
   return {
