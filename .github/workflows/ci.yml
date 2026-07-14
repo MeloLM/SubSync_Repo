@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  quality:
+    name: Lint · Typecheck · Test · Build
+    runs-on: ubuntu-latest
+
+    # Env fittizie: permettono a `prisma generate/validate` e a `next build` di
+    # girare senza segreti né database. NOTA: `prisma migrate deploy` NON gira in
+    # CI — è uno step di RILASCIO (Vercel, via DIRECT_URL). Qui si valida solo la
+    # compilazione, quindi si usa `next build` diretto, non `pnpm build`.
+    env:
+      DATABASE_URL: "postgresql://user:pass@localhost:5432/subsync?schema=public"
+      DIRECT_URL: "postgresql://user:pass@localhost:5432/subsync"
+      NEXT_PUBLIC_SUPABASE_URL: "https://dummy.supabase.co"
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "dummy-anon-key"
+      GEMINI_API_KEY: ""
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prisma generate
+        run: pnpm exec prisma generate
+
+      - name: Prisma validate
+        run: pnpm exec prisma validate
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Typecheck
+        run: pnpm exec tsc --noEmit
+
+      - name: Unit tests
+        run: pnpm run test
+
+      - name: Build (compilazione, senza migrate deploy)
+        run: pnpm exec next build

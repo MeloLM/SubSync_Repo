@@ -3,7 +3,7 @@
 | Metadato         | Valore                                                                 |
 | ---------------- | ---------------------------------------------------------------------- |
 | **Last Updated** | 2026-07-08                                                             |
-| **Status**       | 🚀 **Produzione LIVE su Vercel** — app deployata, stabile e funzionante. DB Supabase collegato via Prisma (`prisma migrate deploy` nella build), variabili d'ambiente di produzione allineate, autenticazione SSR operativa (risolto il bug Server Component "Supabase non configurato"). ✅ Blocco **Deploy** dello Sprint 6 completato. Completati: **Split-Billing** (S5), **AI Receipt Scanner** (S4, Gemini `gemini-2.5-flash`). Pendenti S6: blocco **CI / Qualità** (GitHub Actions lint/typecheck, `prisma validate` + `pnpm build` in CI, test su money/date/Burn Rate). Backlog: Fiscalità & Ottimizzazione (S5), Email Ingestion (S4). |
+| **Status**       | 🟢 **SPRINT 6 COMPLETATO** — Produzione LIVE su Vercel (app stabile: auth SSR, DB Supabase via Prisma). CI **GitHub Actions** attiva (lint · typecheck · unit test · build) + **unit test (Vitest)** sugli helper critici `money`/`date` (Regola 1 Decimal, Regola 2 UTC). Completati: **Split-Billing** (S5), **AI Receipt Scanner** (S4, Gemini `gemini-2.5-flash`). Backlog: Fiscalità & Ottimizzazione (S5 — richiede sblocco `schema.prisma`), Email Ingestion (S4), residui S3 (cache read-only, Lighthouse). |
 | **Goal**         | Tracciare gli abbonamenti e calcolare il **Monthly Burn Rate** normalizzato, con importi monetari accurati (Decimal) e date timezone-safe (00:00:00 UTC). |
 | **Pipeline**     | 6 Sprint a granularità fine — micro-cicli specializzati per prevenire il degrado del contesto. |
 
@@ -136,14 +136,14 @@
 
 ---
 
-## 🟡 SPRINT 6 — DevOps, Testing & Deploy
+## ✅ SPRINT 6 — DevOps, Testing & Deploy `[COMPLETATO]`
 
-> 🟡 Industrializzazione: qualità automatizzata e go-live in produzione.
+> 🟢 Industrializzazione: qualità automatizzata e go-live in produzione.
 
-### CI / Qualità
-- [ ] **GitHub Actions** — pipeline `lint` + `typecheck` su PR
-- [ ] Step `prisma validate` + `pnpm build` in CI
-- [ ] Setup test (unit/integration) sugli helper critici (`money`, `date`, Burn Rate)
+### CI / Qualità `[COMPLETATO]`
+- [x] **GitHub Actions** — pipeline `lint` + `typecheck` + `test` + build su PR/push (`.github/workflows/ci.yml`)
+- [x] Step `prisma validate` + build in CI — usa `next build` (non `pnpm build`) per escludere `migrate deploy`, che è uno step di RILASCIO su Vercel
+- [x] Setup test (**Vitest**) sugli helper critici — `money` (splitByWeights, esattezza Decimal, formatMoney) + `date` (UTC, advanceRenewalDate): 12 test verdi. _Burn Rate: aritmetica pura (Decimal + /12) coperta dai test money; il test dell'action completa è rinviato (richiede mock di Prisma/auth)._
 
 ### Deploy `[COMPLETATO]`
 - [x] Configurazione **variabili d'ambiente di produzione** (DB, Supabase, `CRON_SECRET`) — allineate su Vercel; risolto il bug del Server Component "Supabase non configurato" (env `NEXT_PUBLIC_SUPABASE_*` mancanti a build-time)
