@@ -1,3 +1,6 @@
+# Pipeline di sola Continuous Integration (CI): Lint · Typecheck · Unit test · Build.
+# NESSUN job di deploy: il deploy (Preview e Production) è gestito nativamente da
+# Vercel tramite l'integrazione GitHub → Vercel, non da GitHub Actions.
 name: CI
 
 on:
