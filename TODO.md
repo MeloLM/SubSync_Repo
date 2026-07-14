@@ -3,7 +3,7 @@
 | Metadato         | Valore                                                                 |
 | ---------------- | ---------------------------------------------------------------------- |
 | **Last Updated** | 2026-07-08                                                             |
-| **Status**       | 🚀 **Sprint 6 — Deploy in corso**: app in fase di configurazione su Vercel. Migrazioni Prisma automatizzate nel ciclo di build Vercel (`build` = `prisma generate && prisma migrate deploy && next build`, applicate via `DIRECT_URL`); variabili d'ambiente di produzione + `vercel.json` configurati. Completati: **Split-Billing** (S5), **AI Receipt Scanner** (S4, Gemini `gemini-2.5-flash` via `@google/genai` + auto-fill). Pendenti S6: CI GitHub Actions (lint/typecheck/test), smoke test post-deploy. Backlog: Fiscalità & Ottimizzazione (S5), Email Ingestion (S4). |
+| **Status**       | 🚀 **Produzione LIVE su Vercel** — app deployata, stabile e funzionante. DB Supabase collegato via Prisma (`prisma migrate deploy` nella build), variabili d'ambiente di produzione allineate, autenticazione SSR operativa (risolto il bug Server Component "Supabase non configurato"). ✅ Blocco **Deploy** dello Sprint 6 completato. Completati: **Split-Billing** (S5), **AI Receipt Scanner** (S4, Gemini `gemini-2.5-flash`). Pendenti S6: blocco **CI / Qualità** (GitHub Actions lint/typecheck, `prisma validate` + `pnpm build` in CI, test su money/date/Burn Rate). Backlog: Fiscalità & Ottimizzazione (S5), Email Ingestion (S4). |
 | **Goal**         | Tracciare gli abbonamenti e calcolare il **Monthly Burn Rate** normalizzato, con importi monetari accurati (Decimal) e date timezone-safe (00:00:00 UTC). |
 | **Pipeline**     | 6 Sprint a granularità fine — micro-cicli specializzati per prevenire il degrado del contesto. |
 
@@ -145,11 +145,11 @@
 - [ ] Step `prisma validate` + `pnpm build` in CI
 - [ ] Setup test (unit/integration) sugli helper critici (`money`, `date`, Burn Rate)
 
-### Deploy
-- [x] Configurazione **variabili d'ambiente di produzione** (DB, Supabase, `CRON_SECRET`)
+### Deploy `[COMPLETATO]`
+- [x] Configurazione **variabili d'ambiente di produzione** (DB, Supabase, `CRON_SECRET`) — allineate su Vercel; risolto il bug del Server Component "Supabase non configurato" (env `NEXT_PUBLIC_SUPABASE_*` mancanti a build-time)
 - [x] **Vercel Deployment configuration** (`vercel.json`, build & env)
-- [x] `prisma migrate deploy` nel flusso di rilascio — inserito nello script `build` (gira su Vercel prima di `next build`, via `DIRECT_URL`)
-- [ ] Smoke test post-deploy + monitoraggio errori
+- [x] `prisma migrate deploy` nel flusso di rilascio — nello script `build` (gira su Vercel prima di `next build`, via `DIRECT_URL`); DB Supabase collegato e in sync
+- [x] Smoke test post-deploy — app **live e stabile**: login/autenticazione OK, DB connesso, sessioni SSR funzionanti _(monitoraggio errori in continuo)_
 
 ---
 
