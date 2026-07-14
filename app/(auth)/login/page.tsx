@@ -1,4 +1,4 @@
-import { Flame } from "lucide-react";
+import Image from "next/image";
 
 import { LoginForm } from "@/components/forms/login-form";
 
@@ -7,9 +7,14 @@ export default function LoginPage() {
     <div className="grid min-h-screen place-items-center p-6">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <span className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-xl bg-gradient-to-br from-subsync-purple to-subsync-cyan text-white">
-            <Flame className="h-6 w-6" />
-          </span>
+          <Image
+            src="/logo.png"
+            alt="SubSync"
+            width={517}
+            height={482}
+            priority
+            className="mx-auto mb-4 h-20 w-auto"
+          />
           <h1 className="bg-gradient-to-r from-subsync-purple to-subsync-cyan bg-clip-text text-2xl font-bold tracking-tight text-transparent">
             SubSync
           </h1>
