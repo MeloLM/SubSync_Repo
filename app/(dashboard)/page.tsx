@@ -2,6 +2,8 @@ import { Flame, CalendarClock, TrendingUp } from "lucide-react";
 
 import { listSubscriptions } from "@/actions/subscription.actions";
 import { getMonthlyBurnRate } from "@/actions/burn-rate.actions";
+import { getSpendingTrend } from "@/actions/spending-trend.actions";
+import { SpendingTrendChart } from "@/components/dashboard/spending-trend-chart";
 import { formatMoney } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
@@ -14,9 +16,10 @@ const dateUTC = (iso: string) =>
   }).format(new Date(iso));
 
 export default async function DashboardPage() {
-  const [burnRate, subscriptions] = await Promise.all([
+  const [burnRate, subscriptions, spendingTrend] = await Promise.all([
     getMonthlyBurnRate(),
     listSubscriptions(),
+    getSpendingTrend(),
   ]);
 
   // `listSubscriptions` ordina già per nextRenewalDate asc.
@@ -87,9 +90,7 @@ export default async function DashboardPage() {
           <div className="mb-4 flex items-center gap-2 text-sm text-zinc-400">
             <TrendingUp className="h-4 w-4" /> Trend di spesa
           </div>
-          <div className="grid h-48 place-items-center rounded-xl border border-dashed border-zinc-800 text-sm text-zinc-500">
-            Grafico a barre — in arrivo
-          </div>
+          <SpendingTrendChart data={spendingTrend} />
         </section>
       </div>
     </div>
