@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { CreditCard, LayoutDashboard, Receipt, Users2 } from "lucide-react";
 
@@ -24,9 +25,19 @@ export default async function DashboardLayout({
   return (
     <div className="flex min-h-screen">
       <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col border-r border-zinc-800 bg-subsync-card p-4">
-        <div className="mb-8 bg-gradient-to-r from-subsync-purple to-subsync-cyan bg-clip-text px-2 text-lg font-bold tracking-tight text-transparent">
-          SubSync
-        </div>
+        <Link href="/" className="mb-8 flex items-center gap-2 px-2">
+          <Image
+            src="/logo.png"
+            alt="SubSync"
+            width={517}
+            height={482}
+            priority
+            className="h-8 w-auto"
+          />
+          <span className="bg-gradient-to-r from-subsync-purple to-subsync-cyan bg-clip-text text-lg font-bold tracking-tight text-transparent">
+            SubSync
+          </span>
+        </Link>
 
         <nav className="flex flex-col gap-1">
           {navItems.map(({ href, label, icon: Icon }) => (

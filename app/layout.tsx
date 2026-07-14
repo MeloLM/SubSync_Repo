@@ -16,11 +16,10 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
     title: "SubSync",
   },
+  // La favicon del brand è fornita dalla convenzione file `app/icon.png`
+  // (Next genera automaticamente <link rel="icon">). Qui resta solo l'icona
+  // Apple; le icone PWA 192/512 sono definite in `app/manifest.ts`.
   icons: {
-    icon: [
-      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
-      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
-    ],
     apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
   },
   formatDetection: { telephone: false },
