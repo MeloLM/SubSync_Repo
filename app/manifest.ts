@@ -6,7 +6,7 @@ import type { MetadataRoute } from "next";
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "SubSync — Subscription Burn Rate",
+    name: "SubSync",
     short_name: "SubSync",
     description:
       "Traccia gli abbonamenti e calcola il Monthly Burn Rate normalizzato.",
