@@ -24,27 +24,86 @@ enum InviteStatus {
   DECLINED
 }
 
+// ─── Sprint 7 — Fiscalità & Ottimizzazione ──────────────────────────────────
+
+// Natura della spesa: separa il personale dall'aziendale.
+enum ExpenseNature {
+  PERSONAL
+  BUSINESS
+  MIXED
+}
+
+// Tipologia del documento fiscale associato alla spesa.
+enum FiscalDocumentType {
+  NONE
+  RECEIPT // scontrino / ricevuta
+  INVOICE // fattura
+}
+
+// Regime IVA: copre i casi non esprimibili con la sola aliquota.
+enum VatRegime {
+  STANDARD // aliquota ordinaria
+  REDUCED // aliquota ridotta
+  EXEMPT // esente (es. art. 10)
+  REVERSE_CHARGE // inversione contabile
+  NON_TAXABLE // non imponibile
+}
+
 model User {
   id            String               @id @default(cuid())
   email         String               @unique
   createdAt     DateTime             @default(now())
   subscriptions Subscription[]
   memberships   SubscriptionMember[] // Abbonamenti condivisi con questo utente
+  categories    ExpenseCategory[] // Categorie di spesa personalizzate (Sprint 7)
 }
 
 model Subscription {
-  id              String       @id @default(cuid())
+  id              String               @id @default(cuid())
   userId          String
-  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user            User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   name            String
-  amount          Decimal      @db.Decimal(12, 2) // Regola 1: Decimal, mai Float
-  currency        String       @default("EUR")
+  amount          Decimal              @db.Decimal(12, 2) // Regola 1: Decimal, mai Float
+  currency        String               @default("EUR")
   billingCycle    BillingCycle
   nextRenewalDate DateTime // Regola 2: forzata a 00:00:00 UTC pre-salvataggio
-  createdAt       DateTime     @default(now())
+  createdAt       DateTime             @default(now())
   payments        PaymentLog[]
   members         SubscriptionMember[] // Split-Billing: partecipanti invitati
 
+  // ─── Fiscalità (Sprint 7) — campi additivi, default retro-compatibili ───
+  // Gli abbonamenti esistenti diventano PERSONAL e non deducibili.
+  expenseNature     ExpenseNature      @default(PERSONAL) // personale/aziendale/misto
+  categoryId        String? // FK → ExpenseCategory (opzionale)
+  category          ExpenseCategory?   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  amountIsGross     Boolean            @default(true) // `amount` è IVA inclusa (lordo)?
+  vatRate           Decimal            @default(22) @db.Decimal(5, 2) // aliquota IVA %
+  vatRegime         VatRegime?         @default(STANDARD)
+  costDeductiblePct Decimal            @default(0) @db.Decimal(5, 2) // % deducibilità del COSTO
+  vatDeductiblePct  Decimal            @default(0) @db.Decimal(5, 2) // % detraibilità dell'IVA
+  documentType      FiscalDocumentType @default(NONE)
+  supplierVatId     String? // Partita IVA fornitore (fatture B2B)
+
+  @@index([userId])
+  @@index([categoryId])
+  @@index([userId, expenseNature])
+}
+
+// Categoria di spesa con default fiscali (Sprint 7). `userId` null = categoria di
+// sistema (seed condiviso); valorizzato = categoria personalizzata dall'utente.
+model ExpenseCategory {
+  id                       String         @id @default(cuid())
+  userId                   String?
+  user                     User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name                     String
+  nature                   ExpenseNature  @default(BUSINESS)
+  defaultCostDeductiblePct Decimal        @default(100) @db.Decimal(5, 2) // deducibilità costo suggerita
+  defaultVatRate           Decimal        @default(22) @db.Decimal(5, 2) // aliquota IVA suggerita
+  defaultVatDeductiblePct  Decimal        @default(100) @db.Decimal(5, 2) // detraibilità IVA suggerita
+  createdAt                DateTime       @default(now())
+  subscriptions            Subscription[]
+
+  @@unique([userId, name])
   @@index([userId])
 }
 
