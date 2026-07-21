@@ -1,7 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { BillingCycle } from "@/lib/generated/prisma";
+import type {
+  BillingCycle,
+  ExpenseNature,
+  VatRegime,
+  FiscalDocumentType,
+} from "@/lib/generated/prisma";
 
 import { prisma } from "@/lib/prisma";
 import { money } from "@/lib/money";
@@ -21,6 +26,44 @@ export interface SubscriptionInput {
   billingCycle: BillingCycle;
   /** "YYYY-MM-DD" dal date input, normalizzato a 00:00:00 UTC (Regola 2). */
   nextRenewalDate: string;
+
+  // ─── Fiscalità (Sprint 7) — tutti opzionali: se omessi valgono i default DB ───
+  expenseNature?: ExpenseNature;
+  categoryId?: string | null;
+  amountIsGross?: boolean;
+  /** Aliquota IVA grezza dal form, convertita in Decimal (Regola 1). */
+  vatRate?: string | number;
+  vatRegime?: VatRegime | null;
+  /** % deducibilità costo, convertita in Decimal (Regola 1). */
+  costDeductiblePct?: string | number;
+  /** % detraibilità IVA, convertita in Decimal (Regola 1). */
+  vatDeductiblePct?: string | number;
+  documentType?: FiscalDocumentType;
+  supplierVatId?: string | null;
+}
+
+/**
+ * Estrae i soli campi fiscali effettivamente presenti nell'input, nella forma
+ * attesa da Prisma (Decimal via `money`, Regola 1). I campi assenti (`undefined`)
+ * vengono omessi: in `create` scattano i default del DB, in `update` restano
+ * invariati.
+ */
+function fiscalWriteData(input: Partial<SubscriptionInput>) {
+  return {
+    ...(input.expenseNature !== undefined && { expenseNature: input.expenseNature }),
+    ...(input.categoryId !== undefined && { categoryId: input.categoryId }),
+    ...(input.amountIsGross !== undefined && { amountIsGross: input.amountIsGross }),
+    ...(input.vatRate !== undefined && { vatRate: money(input.vatRate) }),
+    ...(input.vatRegime !== undefined && { vatRegime: input.vatRegime }),
+    ...(input.costDeductiblePct !== undefined && {
+      costDeductiblePct: money(input.costDeductiblePct),
+    }),
+    ...(input.vatDeductiblePct !== undefined && {
+      vatDeductiblePct: money(input.vatDeductiblePct),
+    }),
+    ...(input.documentType !== undefined && { documentType: input.documentType }),
+    ...(input.supplierVatId !== undefined && { supplierVatId: input.supplierVatId }),
+  };
 }
 
 /** Invalida la cache delle viste che dipendono dagli abbonamenti (Regola 3). */
@@ -63,6 +106,7 @@ export async function createSubscription(
       currency: input.currency ?? "EUR",
       billingCycle: input.billingCycle,
       nextRenewalDate: toUtcMidnight(input.nextRenewalDate), // Regola 2
+      ...fiscalWriteData(input), // Fiscalità (Sprint 7)
     },
   });
 
@@ -89,6 +133,7 @@ export async function updateSubscription(
       ...(input.nextRenewalDate !== undefined && {
         nextRenewalDate: toUtcMidnight(input.nextRenewalDate), // Regola 2
       }),
+      ...fiscalWriteData(input), // Fiscalità (Sprint 7)
     },
   });
 

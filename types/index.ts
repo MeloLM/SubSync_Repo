@@ -2,6 +2,9 @@ import type {
   Subscription,
   PaymentLog,
   BillingCycle,
+  ExpenseNature,
+  VatRegime,
+  FiscalDocumentType,
 } from "@/lib/generated/prisma";
 
 /**
@@ -21,6 +24,17 @@ export interface SubscriptionDTO {
   billingCycle: BillingCycle;
   nextRenewalDate: string; // ISO 8601 (UTC)
   createdAt: string; // ISO 8601 (UTC)
+
+  // ─── Fiscalità (Sprint 7) — Decimal serializzati a stringa (Regola 1) ───
+  expenseNature: ExpenseNature;
+  categoryId: string | null;
+  amountIsGross: boolean;
+  vatRate: string; // Prisma.Decimal → stringa (es. "22.00")
+  vatRegime: VatRegime | null;
+  costDeductiblePct: string; // Prisma.Decimal → stringa
+  vatDeductiblePct: string; // Prisma.Decimal → stringa
+  documentType: FiscalDocumentType;
+  supplierVatId: string | null;
 }
 
 export interface PaymentLogDTO {
@@ -61,6 +75,15 @@ export function toSubscriptionDTO(s: Subscription): SubscriptionDTO {
     billingCycle: s.billingCycle,
     nextRenewalDate: s.nextRenewalDate.toISOString(),
     createdAt: s.createdAt.toISOString(),
+    expenseNature: s.expenseNature,
+    categoryId: s.categoryId,
+    amountIsGross: s.amountIsGross,
+    vatRate: s.vatRate.toFixed(2),
+    vatRegime: s.vatRegime,
+    costDeductiblePct: s.costDeductiblePct.toFixed(2),
+    vatDeductiblePct: s.vatDeductiblePct.toFixed(2),
+    documentType: s.documentType,
+    supplierVatId: s.supplierVatId,
   };
 }
 
