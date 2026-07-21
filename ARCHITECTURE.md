@@ -129,6 +129,14 @@ La logica di calcolo e aggregazione del **Monthly Burn Rate** è confinata
 - Il client **non** ricalcola né duplica la logica: riceve il valore già aggregato.
   Singola fonte di verità per i KPI, nessuna divergenza tra le viste.
 
+### Regola 5 — Architettura UI Modulare e Mobile-First
+Ogni vista complessa deve essere frammentata in micro-componenti (es. separando
+i form, le card e la logica di layout in file distinti dentro `components/`). È
+severamente vietato creare file di pagina monolitici. Il design deve essere
+sviluppato in ottica Mobile-First utilizzando i breakpoint di Tailwind CSS.
+Questo approccio previene il sovraccarico cognitivo (sia umano che dell'IA)
+durante le modifiche UI.
+
 ---
 
 ## Schema relazionale (bozza)

@@ -2,8 +2,8 @@
 
 | Metadato         | Valore                                                                 |
 | ---------------- | ---------------------------------------------------------------------- |
-| **Last Updated** | 2026-07-08                                                             |
-| **Status**       | 🟢 **SPRINT 6 COMPLETATO** — Produzione LIVE su Vercel (app stabile: auth SSR, DB Supabase via Prisma). CI **GitHub Actions** attiva (lint · typecheck · unit test · build) + **unit test (Vitest)** sugli helper critici `money`/`date` (Regola 1 Decimal, Regola 2 UTC). Completati: **Split-Billing** (S5), **AI Receipt Scanner** (S4, Gemini `gemini-2.5-flash`). Backlog: Fiscalità & Ottimizzazione (S5 — richiede sblocco `schema.prisma`), Email Ingestion (S4), residui S3 (cache read-only, Lighthouse). |
+| **Last Updated** | 2026-07-15                                                             |
+| **Status**       | 🔴 **SPRINT 7 — Architettura Modulare & Responsive UI** è il nuovo focus principale (urgenza massima 🔴): refactoring modulare dei componenti + ristrutturazione **Mobile-First** con i breakpoint Tailwind (`sm:`/`md:`/`lg:`). App **LIVE e stabile su Vercel** (Sprint 6 completato: auth SSR, DB Supabase via Prisma, CI GitHub Actions, unit test Vitest). Backlog invariato: Fiscalità & Ottimizzazione (S5), Email Ingestion (S4), residui S3 (cache read-only, Lighthouse). |
 | **Goal**         | Tracciare gli abbonamenti e calcolare il **Monthly Burn Rate** normalizzato, con importi monetari accurati (Decimal) e date timezone-safe (00:00:00 UTC). |
 | **Pipeline**     | 6 Sprint a granularità fine — micro-cicli specializzati per prevenire il degrado del contesto. |
 
@@ -89,7 +89,7 @@
 ### Meta & UX mobile
 - [x] Meta tag **iOS/Android** (`apple-mobile-web-app-*`, `theme-color`, `viewport-fit=cover`)
 - [x] Componente **Install Prompt** (A2HS) — banner dedicato su `beforeinstallprompt`
-- [ ] Audit responsive + Lighthouse PWA ≥ 90 _(da eseguire manualmente su build prod)_
+- [ ] Lighthouse PWA ≥ 90 _(da eseguire manualmente su build prod; audit responsive → SPRINT 7)_
 
 ---
 
@@ -150,6 +150,17 @@
 - [x] **Vercel Deployment configuration** (`vercel.json`, build & env)
 - [x] `prisma migrate deploy` nel flusso di rilascio — nello script `build` (gira su Vercel prima di `next build`, via `DIRECT_URL`); DB Supabase collegato e in sync
 - [x] Smoke test post-deploy — app **live e stabile**: login/autenticazione OK, DB connesso, sessioni SSR funzionanti _(monitoraggio errori in continuo)_
+
+---
+
+## 🔴 SPRINT 7 — Architettura Modulare & Responsive UI
+
+> 🔴 Urgenza massima. Ristrutturazione dell'interfaccia per garantire una fruizione perfetta su smartphone e frammentazione dei componenti per alleggerire il carico sui file sorgente. Vincolo di riferimento: **Regola 5** (`ARCHITECTURE.md`).
+
+- [ ] **Refactoring modulare**: Isolare le sezioni complesse di `/subscriptions` e della Dashboard in micro-componenti UI dedicati.
+- [ ] **Implementazione Mobile-First**: Ristrutturare layout, griglie e flussi utilizzando i breakpoint Tailwind (`sm:`, `md:`, `lg:`).
+- [ ] **Ottimizzazione Navigazione**: Adattare la sidebar/header per dispositivi touch (es. menu a comparsa o bottom navigation).
+- [ ] **Audit Visivo**: Risolvere eventuali overflow orizzontali e ottimizzare i padding su viewport mobili.
 
 ---
 

@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 
 import { createClient } from "@/lib/supabase/server";
 
@@ -55,6 +56,34 @@ export async function signUp(formData: FormData): Promise<AuthResult> {
   } catch {
     return { error: NOT_CONFIGURED };
   }
+}
+
+/**
+ * 🔐 Social login via OAuth (Google). Genera l'URL di autorizzazione Supabase e
+ * reindirizza il browser al provider. Al ritorno, `/auth/callback` scambia il
+ * `code` per la sessione (stesso flusso di conferma email).
+ *
+ * NB: il provider Google va abilitato nel pannello Supabase (Authentication →
+ * Providers) perché il flusso funzioni end-to-end.
+ */
+export async function signInWithGoogle(): Promise<AuthResult> {
+  let url: string | null = null;
+  try {
+    const supabase = createClient();
+    const origin = headers().get("origin") ?? "";
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${origin}/auth/callback` },
+    });
+    if (error) return { error: error.message };
+    url = data?.url ?? null;
+  } catch {
+    return { error: NOT_CONFIGURED };
+  }
+
+  // `redirect` DEVE stare fuori dal try/catch: lancia NEXT_REDIRECT di proposito.
+  if (!url) return { error: "Impossibile avviare l'accesso con Google." };
+  redirect(url);
 }
 
 export async function signOut(): Promise<void> {
