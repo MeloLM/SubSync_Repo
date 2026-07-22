@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2, Lock, LogIn, Mail, UserPlus } from "lucide-react";
+import { Eye, EyeOff, Loader2, Lock, LogIn, Mail, UserPlus } from "lucide-react";
 
 import { signIn, signUp, signInWithGoogle } from "@/actions/auth.actions";
 
@@ -43,6 +43,7 @@ export function LoginForm() {
   const [mode, setMode] = useState<Mode>("login");
   const [isPending, startTransition] = useTransition();
   const [isOAuthPending, startOAuth] = useTransition();
+  const [showPassword, setShowPassword] = useState(false);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -136,13 +137,26 @@ export function LoginForm() {
             <input
               id="password"
               name="password"
-              type="password"
+              type={showPassword ? "text" : "password"}
               required
               minLength={6}
               autoComplete={isLogin ? "current-password" : "new-password"}
               placeholder="••••••••"
-              className={inputCls}
+              className={`${inputCls} !pr-10`}
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              aria-label={showPassword ? "Nascondi password" : "Mostra password"}
+              aria-pressed={showPassword}
+              className="absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-md text-zinc-500 transition-colors hover:text-zinc-300"
+            >
+              {showPassword ? (
+                <EyeOff className="h-4 w-4" />
+              ) : (
+                <Eye className="h-4 w-4" />
+              )}
+            </button>
           </div>
         </div>
 
