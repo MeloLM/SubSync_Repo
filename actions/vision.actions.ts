@@ -2,11 +2,11 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 
-import type { BillingCycle } from "@/lib/generated/prisma";
+import type { BillingCycle, FiscalDocumentType } from "@/lib/generated/prisma";
 
 /**
  * Struttura dati estratta da uno scontrino/fattura dal modello Vision.
- * Mappa 1:1 sui campi editabili del form abbonamento (per l'auto-fill).
+ * Mappa sui campi editabili del form abbonamento (per l'auto-fill).
  */
 export interface ReceiptExtraction {
   name: string;
@@ -15,6 +15,14 @@ export interface ReceiptExtraction {
   billingCycle: BillingCycle;
   /** Prossimo rinnovo in formato ISO 8601 "YYYY-MM-DD" (vuoto se non deducibile). */
   nextRenewalDate: string;
+
+  // ─── Fiscalità (Sprint 7) — sempre valorizzati con default logici lato server ───
+  /** Aliquota IVA in percentuale (default 22 se non rilevata). */
+  vatRate: number;
+  /** L'importo include l'IVA (lordo)? Default true (tipico di scontrini/ricevute). */
+  amountIsGross: boolean;
+  /** Tipo documento rilevato: scontrino/ricevuta (RECEIPT) o fattura (INVOICE). */
+  documentType: FiscalDocumentType;
 }
 
 /**
@@ -32,8 +40,33 @@ const RECEIPT_SCHEMA = {
       type: Type.STRING,
       description: "Data del prossimo rinnovo in formato YYYY-MM-DD",
     },
+    vatRate: {
+      type: Type.NUMBER,
+      description:
+        "Aliquota IVA in percentuale come numero (es. 22, 10, 4). Usa 22 se non indicata.",
+    },
+    amountIsGross: {
+      type: Type.BOOLEAN,
+      description:
+        "true se l'importo totale include l'IVA (lordo), false se è un imponibile netto.",
+    },
+    documentType: {
+      type: Type.STRING,
+      enum: ["RECEIPT", "INVOICE"],
+      description:
+        "RECEIPT per scontrino/ricevuta, INVOICE per una fattura (con partita IVA/dati fiscali).",
+    },
   },
-  required: ["name", "amount", "currency", "billingCycle", "nextRenewalDate"],
+  required: [
+    "name",
+    "amount",
+    "currency",
+    "billingCycle",
+    "nextRenewalDate",
+    "vatRate",
+    "amountIsGross",
+    "documentType",
+  ],
 };
 
 const SYSTEM_INSTRUCTION =
@@ -47,6 +80,12 @@ const SYSTEM_INSTRUCTION =
   "rinnovo è '2026-07-21'). Se vedi solo la data di pagamento, calcola il rinnovo " +
   "aggiungendo 1 mese o 1 anno in base al ciclo. Restituisci TASSATIVAMENTE la data " +
   "nel formato ISO 8601 'YYYY-MM-DD'. " +
+  "Estrai inoltre i dati FISCALI: l'aliquota IVA in percentuale come numero " +
+  "(vatRate, es. 22, 10 o 4; usa 22 se non è indicata). Indica se l'importo totale " +
+  "include l'IVA (amountIsGross: true per un lordo comprensivo di IVA, tipico di " +
+  "scontrini e ricevute; false solo se il documento mostra chiaramente un imponibile " +
+  "netto). Classifica il tipo di documento (documentType: RECEIPT per uno scontrino o " +
+  "una ricevuta, INVOICE per una fattura con partita IVA o dati fiscali del fornitore). " +
   "Rispondi esclusivamente con l'oggetto JSON conforme allo schema.";
 
 /** Estrae `mimeType` + base64 puro sia da un data URL sia da base64 grezzo. */
@@ -120,11 +159,22 @@ export async function extractDataFromReceipt(
   const rawDate = String(parsed.nextRenewalDate ?? "").trim();
   const nextRenewalDate = /^\d{4}-\d{2}-\d{2}$/.test(rawDate) ? rawDate : "";
 
+  // Fiscalità: default logici se l'IA non li rileva → mai `undefined` verso il form.
+  const parsedVat = Number(parsed.vatRate);
+  const vatRate = Number.isFinite(parsedVat) && parsedVat >= 0 ? parsedVat : 22;
+  const amountIsGross =
+    typeof parsed.amountIsGross === "boolean" ? parsed.amountIsGross : true;
+  const documentType: FiscalDocumentType =
+    parsed.documentType === "INVOICE" ? "INVOICE" : "RECEIPT";
+
   return {
     name: String(parsed.name ?? "").trim(),
     amount: Number(parsed.amount ?? 0),
     currency: String(parsed.currency ?? "EUR").trim().toUpperCase(),
     billingCycle,
     nextRenewalDate,
+    vatRate,
+    amountIsGross,
+    documentType,
   };
 }

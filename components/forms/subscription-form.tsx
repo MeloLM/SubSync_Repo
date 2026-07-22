@@ -11,7 +11,7 @@ import {
   updateSubscription,
 } from "@/actions/subscription.actions";
 import type { ReceiptExtraction } from "@/actions/vision.actions";
-import type { BillingCycle } from "@/lib/generated/prisma";
+import type { BillingCycle, FiscalDocumentType } from "@/lib/generated/prisma";
 import type { SubscriptionDTO } from "@/types";
 
 const inputCls =
@@ -50,6 +50,13 @@ export const SubscriptionForm = forwardRef<
   const [nextRenewalDate, setNextRenewalDate] = useState(
     initial?.nextRenewalDate.slice(0, 10) ?? "",
   );
+  // Campi fiscali estratti via OCR: nessuna UI dedicata ancora (Sprint UI futuro),
+  // ma vengono trasportati fino al salvataggio così i dati dello scanner non vanno persi.
+  const [scannedFiscal, setScannedFiscal] = useState<{
+    vatRate?: string;
+    amountIsGross?: boolean;
+    documentType?: FiscalDocumentType;
+  }>({});
 
   useImperativeHandle(
     ref,
@@ -66,6 +73,12 @@ export const SubscriptionForm = forwardRef<
         if (data.nextRenewalDate) {
           setNextRenewalDate(data.nextRenewalDate);
         }
+        // Trasporta i dati fiscali estratti (sempre valorizzati con default dall'action).
+        setScannedFiscal({
+          vatRate: String(data.vatRate),
+          amountIsGross: data.amountIsGross,
+          documentType: data.documentType,
+        });
       },
     }),
     [],
@@ -79,6 +92,7 @@ export const SubscriptionForm = forwardRef<
       currency,
       billingCycle,
       nextRenewalDate,
+      ...scannedFiscal, // campi fiscali da OCR (assenti in inserimento manuale → default DB)
     };
 
     startTransition(async () => {
