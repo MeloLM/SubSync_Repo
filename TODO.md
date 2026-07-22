@@ -80,7 +80,7 @@
 - [x] `app/manifest.ts` — `name`, `short_name`, `theme_color`, `display: standalone` (→ `/manifest.webmanifest`)
 - [x] Iconografia — `192x192`, `512x512` + `512` **maskable** (PNG reali in `public/`)
 - [x] `apple-touch-icon` (180) + meta `apple-mobile-web-app-*` _(startup image iOS dedicate: rinviate)_
-- [ ] Schermata di invito con **QR Code** per il download rapido della PWA tramite link condiviso
+- [x] Schermata di invito con **QR Code** per il download rapido della PWA tramite link condiviso — rotta `/invite` (`qrcode.react`, copia link + Web Share)
 
 ### Offline & Service Worker
 - [x] **Service Worker** (`public/sw.js`) — cache-first su asset statici (`/_next/static` + icone)

@@ -1,12 +1,19 @@
 import Image from "next/image";
 import Link from "next/link";
-import { CreditCard, LayoutDashboard, Receipt, Users2 } from "lucide-react";
+import {
+  CreditCard,
+  LayoutDashboard,
+  QrCode,
+  Receipt,
+  Users2,
+} from "lucide-react";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/subscriptions", label: "Abbonamenti", icon: CreditCard },
   { href: "/payments", label: "Pagamenti", icon: Receipt },
   { href: "/shared", label: "Condivisi", icon: Users2 },
+  { href: "/invite", label: "Invita", icon: QrCode },
 ];
 
 /**
