@@ -26,6 +26,19 @@ export function toUtcMidnight(input: string | Date): Date {
 }
 
 /**
+ * Formatta una data ISO (UTC) per la UI in it-IT (es. "01 set 2026").
+ * Legge i componenti in UTC per coerenza con la Regola 2 (nessun off-by-one).
+ */
+export function formatDateUTC(iso: string): string {
+  return new Intl.DateTimeFormat("it-IT", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(iso));
+}
+
+/**
  * Avanza una data di rinnovo al ciclo successivo mantenendo 00:00:00 UTC
  * (Regola 2): MONTHLY → +1 mese, YEARLY → +1 anno.
  * Usato dal cron job dei rinnovi.
