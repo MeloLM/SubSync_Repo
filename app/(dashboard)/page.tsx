@@ -44,7 +44,7 @@ export default async function DashboardPage() {
             Monthly Burn Rate
           </div>
           <div className="flex items-end gap-3">
-            <span className="text-5xl font-bold tracking-tight tabular-nums text-subsync-cyan">
+            <span className="text-4xl font-bold tracking-tight tabular-nums text-subsync-cyan sm:text-5xl">
               {formatMoney(burnRate.monthlyBurnRate, burnRate.currency)}
             </span>
           </div>

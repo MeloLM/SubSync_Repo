@@ -1,16 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
-import { CreditCard, LayoutDashboard, Receipt, Users2 } from "lucide-react";
 
 import { getCurrentUser } from "@/lib/auth";
 import { countPendingInvites } from "@/actions/split.actions";
-
-const navItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/subscriptions", label: "Abbonamenti", icon: CreditCard },
-  { href: "/payments", label: "Pagamenti", icon: Receipt },
-  { href: "/shared", label: "Condivisi", icon: Users2 },
-];
+import { SidebarContent } from "@/components/dashboard/sidebar-content";
+import { MobileNav } from "@/components/dashboard/mobile-nav";
 
 export default async function DashboardLayout({
   children,
@@ -24,59 +18,44 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex min-h-screen">
-      <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col border-r border-zinc-800 bg-subsync-card p-4">
-        <Link href="/" className="mb-8 flex items-center gap-2 px-2">
-          <Image
-            src="/logo.png"
-            alt="SubSync"
-            width={517}
-            height={482}
-            priority
-            className="h-8 w-auto"
-          />
-          <span className="bg-gradient-to-r from-subsync-purple to-subsync-cyan bg-clip-text text-lg font-bold tracking-tight text-transparent">
-            SubSync
-          </span>
-        </Link>
-
-        <nav className="flex flex-col gap-1">
-          {navItems.map(({ href, label, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white"
-            >
-              <Icon className="h-4 w-4" />
-              {label}
-              {href === "/shared" && pendingInvites > 0 && (
-                <span className="ml-auto grid h-5 min-w-5 place-items-center rounded-full bg-subsync-purple px-1.5 text-xs font-bold text-white">
-                  {pendingInvites}
-                </span>
-              )}
-            </Link>
-          ))}
-        </nav>
-
-        {/* Profilo utente — in fondo alla sidebar */}
-        <Link
-          href="/profile"
-          className="mt-auto flex items-center gap-3 rounded-lg border border-zinc-800 p-2 transition-colors hover:bg-zinc-800"
-        >
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-subsync-purple to-subsync-cyan text-sm font-bold text-white">
-            {initial}
-          </span>
-          <span className="min-w-0">
-            <span className="block truncate text-sm font-medium text-zinc-100">
-              {email}
-            </span>
-            <span className="block truncate text-xs text-zinc-400">
-              Profilo e impostazioni
-            </span>
-          </span>
-        </Link>
+      {/* Sidebar laterale — SOLO desktop (`lg:`); sotto `lg` è del tutto assente */}
+      <aside className="sticky top-0 hidden h-screen shrink-0 border-r border-zinc-800 bg-subsync-card p-4 lg:flex lg:w-60 lg:flex-col">
+        <SidebarContent
+          email={email}
+          initial={initial}
+          pendingInvites={pendingInvites}
+        />
       </aside>
 
-      <main className="flex-1 p-8">{children}</main>
+      {/* Colonna contenuto: header mobile + main a tutta larghezza */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* Header mobile — visibile sotto `lg`; `relative` ancora la tendina */}
+        <header className="relative flex items-center justify-between border-b border-zinc-800 bg-subsync-card p-4 lg:hidden">
+          <Link href="/" className="flex items-center gap-2">
+            <Image
+              src="/logo.png"
+              alt="SubSync"
+              width={517}
+              height={482}
+              priority
+              className="h-7 w-auto"
+            />
+            <span className="bg-gradient-to-r from-subsync-purple to-subsync-cyan bg-clip-text text-base font-bold tracking-tight text-transparent">
+              SubSync
+            </span>
+          </Link>
+          <MobileNav>
+            <SidebarContent
+              email={email}
+              initial={initial}
+              pendingInvites={pendingInvites}
+              showLogo={false}
+            />
+          </MobileNav>
+        </header>
+
+        <main className="w-full flex-1 p-4 lg:p-8">{children}</main>
+      </div>
     </div>
   );
 }

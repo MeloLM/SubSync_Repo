@@ -137,6 +137,20 @@ sviluppato in ottica Mobile-First utilizzando i breakpoint di Tailwind CSS.
 Questo approccio previene il sovraccarico cognitivo (sia umano che dell'IA)
 durante le modifiche UI.
 
+### Regola 6 — Responsive Design e Breakpoint Vincolanti
+I breakpoint standard di Tailwind sono **legge assoluta** per il layout. Sono
+vietate deroghe che facciano affiancare la sidebar sotto la soglia desktop.
+
+- **Mobile (default, `< 768px`)** — layout a **singola colonna, 100% width**.
+  **Nessuna sidebar affiancata consentita**: la navigazione vive in un **Header
+  superiore** (menu a tendina).
+- **Tablet (`md:` 768px – 1024px)** — layout di transizione.
+- **Desktop (`lg:` ≥ 1024px)** — layout a **due colonne**: Sidebar laterale
+  fissa + Contenuto.
+
+Conseguenza operativa: la sidebar laterale esiste **solo** da `lg:` in su
+(`hidden lg:flex`); sotto `lg` la navigazione è esclusivamente nell'header mobile.
+
 ---
 
 ## Schema relazionale (bozza)
