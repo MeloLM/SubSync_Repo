@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Eye, EyeOff, Loader2, Lock, LogIn, Mail, UserPlus } from "lucide-react";
@@ -186,6 +187,24 @@ export function LoginForm() {
           </button>
         </p>
       </form>
+
+      <p className="text-center text-xs text-zinc-500">
+        Accedendo accetti i{" "}
+        <Link
+          href="/terms"
+          className="text-zinc-400 underline underline-offset-2 transition-colors hover:text-zinc-300"
+        >
+          Termini
+        </Link>{" "}
+        e la{" "}
+        <Link
+          href="/privacy"
+          className="text-zinc-400 underline underline-offset-2 transition-colors hover:text-zinc-300"
+        >
+          Privacy Policy
+        </Link>
+        .
+      </p>
     </div>
   );
 }

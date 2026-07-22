@@ -58,9 +58,12 @@ function redirectToLogin(request: NextRequest) {
 
 /**
  * Esegue il middleware su tutto tranne: asset statici di Next, favicon,
- * la pagina `/login`, le route `/auth/*` e `/api/*`, e i file con estensione.
- * Restano protette: `/`, `/subscriptions`, `/payments`, `/profile`.
+ * la pagina `/login`, le route `/auth/*` e `/api/*`, le pagine legali pubbliche
+ * `/privacy` e `/terms`, e i file con estensione.
+ * Restano protette: `/`, `/subscriptions`, `/payments`, `/profile`, `/invite`.
  */
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|login|auth|api|.*\\..*).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|login|auth|api|privacy|terms|.*\\..*).*)",
+  ],
 };
