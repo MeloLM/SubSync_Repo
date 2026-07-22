@@ -55,3 +55,42 @@
   Consolidato nel commit `fix(auth): callback OAuth PKCE, toggle password e trigger
   sync utenti (Sprint 7)` + push su origin. Reminder: abilitare il provider Google
   in Supabase → Authentication → Providers.
+
+---
+
+## 2026-07-22 17:48 (+0200) — Scaffold pagine legali + Schermata Invito (QR)
+
+- **Pagine legali (route group `(marketing)`)**: nuove rotte pubbliche `/privacy` e
+  `/terms` (server component, statiche) con layout condiviso e testo placeholder
+  "Lorem ipsum" da sostituire. **Middleware** aggiornato per escludere `privacy` e
+  `terms` dalla protezione (necessario per l'approvazione OAuth Google). Aggiunto un
+  footer legale nel `login-form` ("Accedendo accetti i Termini e la Privacy Policy").
+- **Schermata Invito (`/invite`)**: installata `qrcode.react@4.2.0`; nuova rotta
+  `app/(dashboard)/invite/page.tsx` (sottile) + `components/invite/invite-card.tsx`
+  (client). QR **SVG** che codifica `window.location.origin` (generato in locale →
+  nessuna richiesta esterna, PWA/CSP-safe), su sfondo chiaro per la scansionabilità.
+  Azioni: **Copia link** (`navigator.clipboard`) e **Condividi** via Web Share API
+  (`navigator.share`) mostrato solo se supportato, con fallback a copia. Voce "Invita"
+  aggiunta al nav (`sidebar-content`), visibile in sidebar desktop e tendina mobile.
+- **TODO.md**: task QR Code spuntata.
+- Verifica: `tsc --noEmit` + `next build` **Exit 0** (16/16 pagine: `/invite`,
+  `/privacy`, `/terms` nuove). In attesa di conferma per il commit.
+
+---
+
+## 2026-07-22 17:55 (+0200) — Regola 7 (Changelog Obbligatorio)
+
+- **`ARCHITECTURE.md`**: aggiunta la **Regola 7 — Changelog Obbligatorio**: al
+  termine di ogni task, prima di chiedere l'ok per il commit, è tassativo
+  aggiornare questo diario con un blocco datato (file toccati + motivazione, esito
+  verifica, note di config). Formalizza come standard di progetto la prassi già in
+  uso in queste sessioni.
+- **Backfill log**: verificato che lo storico dei fix Auth (callback OAuth
+  request→response, toggle password, trigger SQL `auth.users → public."User"`) e
+  del push era **già registrato** nell'entry delle `17:17` → nessuna duplicazione
+  aggiunta.
+- **Pagine Legali + QR (`/invite`)**: già implementate e verificate nell'entry delle
+  `17:48` (route `(marketing)` privacy/terms + footer login + middleware; `/invite`
+  con `qrcode.react`, copia link, Web Share). Nessuna nuova modifica di codice qui.
+- Verifica: `next build` **Exit 0** (nessun impatto: modificati solo file di doc).
+  In attesa di conferma per il commit.

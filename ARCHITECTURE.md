@@ -151,6 +151,19 @@ vietate deroghe che facciano affiancare la sidebar sotto la soglia desktop.
 Conseguenza operativa: la sidebar laterale esiste **solo** da `lg:` in su
 (`hidden lg:flex`); sotto `lg` la navigazione è esclusivamente nell'header mobile.
 
+### Regola 7 — Changelog Obbligatorio
+Al termine di **ogni** esecuzione/task, **prima di chiedere l'ok per il commit**,
+è **tassativo** aggiornare il diario di bordo in `.agent-logs/`
+(`sprint-N-changelog.md`) con un blocco datato che riepiloghi in dettaglio:
+- i file **creati/modificati** e la motivazione;
+- l'esito della **verifica** (`tsc --noEmit` / `next build`);
+- eventuali **note di configurazione** (es. step manuali su Supabase/Vercel).
+
+Il changelog è di **sola documentazione** (non entra nel bundle Next.js) e
+costituisce la traccia cronologica per sessione. **Nessun commit** va richiesto
+senza aver prima aggiornato questa traccia. Nuovo sprint → nuovo file
+`sprint-N-changelog.md` nella stessa cartella.
+
 ---
 
 ## Schema relazionale (bozza)
