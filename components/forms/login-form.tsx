@@ -14,24 +14,6 @@ const inputCls =
 const labelCls =
   "mb-1.5 block text-xs font-medium uppercase tracking-wide text-zinc-400";
 
-/** Mappa il dominio email al link del provider di posta (feedback post-signup). */
-function providerFromEmail(
-  email: string,
-): { label: string; url: string } | null {
-  const domain = email.split("@")[1]?.toLowerCase() ?? "";
-  if (domain.includes("gmail.com") || domain.includes("googlemail.com")) {
-    return { label: "Apri Gmail", url: "https://mail.google.com" };
-  }
-  if (
-    domain.includes("outlook") ||
-    domain.includes("hotmail") ||
-    domain.includes("live.")
-  ) {
-    return { label: "Apri Outlook", url: "https://outlook.live.com" };
-  }
-  return null;
-}
-
 /** Logo Google — SVG inline, self-contained (nessuna richiesta esterna). */
 function GoogleIcon({ className }: { className?: string }) {
   return (
@@ -77,26 +59,11 @@ export function LoginForm() {
         return;
       }
 
-      if (res.message) {
-        // Post-signup: offri una scorciatoia alla casella email per la conferma.
-        const provider = providerFromEmail(String(fd.get("email") ?? ""));
-        toast.success("Registrazione completata", {
-          description: res.message,
-          duration: 8000,
-          ...(provider && {
-            action: {
-              label: provider.label,
-              onClick: () =>
-                window.open(provider.url, "_blank", "noopener,noreferrer"),
-            },
-          }),
-        });
-        setMode("login");
-        return;
-      }
-
-      // Login riuscito: la sessione (cookie) è stata impostata dalla Server Action.
-      toast.success("Accesso eseguito");
+      // Conferma email disattivata: login e registrazione portano entrambi subito a
+      // una sessione attiva (cookie impostati) → feedback fluido + redirect immediato.
+      toast.success(
+        mode === "login" ? "Accesso eseguito" : "Account creato: bentornato!",
+      );
       router.push("/");
       router.refresh();
     });

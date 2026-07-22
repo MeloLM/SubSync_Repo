@@ -11,7 +11,7 @@ import { createClient } from "@/lib/supabase/server";
  * (`lib/supabase/server.ts`), che legge/scrive la sessione via cookie.
  */
 
-export type AuthResult = { ok?: boolean; error?: string; message?: string };
+export type AuthResult = { ok?: boolean; error?: string };
 
 const NOT_CONFIGURED =
   "Supabase non configurato: compila .env.local con le tue credenziali e riavvia il server.";
@@ -49,10 +49,9 @@ export async function signUp(formData: FormData): Promise<AuthResult> {
     const supabase = createClient();
     const { error } = await supabase.auth.signUp({ email, password });
     if (error) return { error: error.message };
-    return {
-      message:
-        "Account creato. Controlla l'email per la conferma, poi effettua l'accesso.",
-    };
+    // Conferma email disattivata lato Supabase: signUp imposta già la sessione
+    // (cookie) → l'utente è autenticato, accesso immediato senza passaggio email.
+    return { ok: true };
   } catch {
     return { error: NOT_CONFIGURED };
   }
