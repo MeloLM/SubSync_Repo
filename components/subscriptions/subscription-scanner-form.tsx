@@ -20,7 +20,22 @@ export function SubscriptionScannerForm() {
 
   function handleExtract(data: ReceiptExtraction) {
     formRef.current?.applyExtraction(data);
-    toast.info("Fattura analizzata! Controlla i dati prima di salvare.");
+
+    // Il form supporta solo EUR/USD: se l'IA rileva un'altra valuta, viene lasciata
+    // su EUR (vedi applyExtraction) e l'utente va avvisato di verificarla.
+    const unsupportedCurrency =
+      data.currency !== "" &&
+      data.currency !== "EUR" &&
+      data.currency !== "USD";
+
+    if (unsupportedCurrency) {
+      toast.warning(`Valuta "${data.currency}" non supportata`, {
+        description:
+          "Dati compilati, ma la valuta è rimasta su EUR: verificala prima di salvare.",
+      });
+    } else {
+      toast.info("Fattura analizzata! Controlla i dati prima di salvare.");
+    }
   }
 
   return (

@@ -114,8 +114,9 @@
 
 ### 👁️ AI Receipt Scanner (Vision API) `[COMPLETATO]`
 - [x] Integrazione UI: Dropzone (`react-dropzone`) nel form `/subscriptions/new` — componente `image-scanner` + wrapper `subscription-scanner-form`.
-- [x] Server Action: `actions/vision.actions.ts` — SDK ufficiale **Google Gemini** (`@google/genai`, modello `gemini-1.5-flash`), immagine via `inlineData`; chiave da `GEMINI_API_KEY`.
-- [x] Prompt Engineering: `systemInstruction` + output vincolato con `responseMimeType: application/json` e `responseSchema` (JSON Schema rigoroso) → `{ name, amount, currency, billingCycle }`.
+- [x] Server Action: `actions/vision.actions.ts` — SDK ufficiale **Google Gemini** (`@google/genai`, modello `gemini-2.5-flash`), immagine via `inlineData`; chiave da `GEMINI_API_KEY`.
+- [x] Prompt Engineering: `systemInstruction` + output vincolato con `responseMimeType: application/json` e `responseSchema` (JSON Schema rigoroso) → `{ name, amount, currency, billingCycle, nextRenewalDate, vatRate, amountIsGross, documentType }`.
+- [x] Hardening (S7): compressione immagine client (`<canvas>`) + `serverActions.bodySizeLimit` 4mb + `maxSize` dropzone; ritorno tipizzato `{ ok, data|error }` con mappatura errori Gemini (401/429/rete); anteprima thumbnail + annulla; fallback valuta ≠ EUR/USD.
 - [x] Auto-fill: JSON cablato ai campi del form via handle imperativo (`setValue`-like su form controllato); toast "Fattura analizzata! Controlla i dati prima di salvare."
 
 ---

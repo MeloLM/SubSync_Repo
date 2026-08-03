@@ -94,3 +94,44 @@
   con `qrcode.react`, copia link, Web Share). Nessuna nuova modifica di codice qui.
 - Verifica: `next build` **Exit 0** (nessun impatto: modificati solo file di doc).
   In attesa di conferma per il commit.
+
+---
+
+## 2026-08-03 18:25 (+0200) — Check-up generale + analisi OCR
+
+- **Health check** (post-consolidamento Sprint 7): `tsc --noEmit` **Exit 0**,
+  `next lint` **Exit 0** (nessun warning), `next build` **Exit 0** (16/16 route,
+  middleware compilato). Nessun debito tecnico di compilazione.
+- **Analisi Scanner IA (OCR)** — individuati due bug reali: (1) le immagini
+  viaggiano come argomento base64 di una Server Action → superano il limite body
+  di 1MB (default) con foto reali da smartphone; (2) gli errori sono `throw` →
+  **redatti in produzione** da Next.js, il client non riceve messaggi utili.
+  Più debito: commento "mockata" obsoleto in `image-scanner`, TODO Sprint 4
+  disallineato (modello/output), valuta ≠ EUR/USD scartata in silenzio.
+- **Decisione**: si passa al refactoring dell'OCR (compressione client + body
+  limit 4mb + maxSize; ritorno tipizzato con mappatura errori Gemini; anteprima
+  thumbnail + annulla; fallback valuta; pulizia doc).
+
+---
+
+## 2026-08-03 18:29 (+0200) — Fix Scanner IA (OCR)
+
+- **`next.config.mjs`**: `experimental.serverActions.bodySizeLimit = '4mb'` (rete
+  di sicurezza per il payload immagine).
+- **`actions/vision.actions.ts`**: `extractDataFromReceipt` ora ritorna un
+  discriminated union `{ ok: true; data } | { ok: false; error }` invece di
+  lanciare (i throw sono redatti in produzione). Chiamata Gemini in try/catch con
+  `mapGeminiError` → messaggi chiari per 401 (chiave), 429 (rate limit), rete,
+  blocco safety, JSON invalido, risposta vuota.
+- **`components/forms/image-scanner.tsx`**: compressione client via `<canvas>`
+  (lato lungo ~1400px, JPEG 0.7) prima dell'upload; `maxSize` 15 MB con messaggio
+  dedicato; **anteprima thumbnail** con overlay di caricamento e tasto **Annulla**;
+  gestione del nuovo output tipizzato; rimosso il commento obsoleto "mockata".
+- **`components/subscriptions/subscription-scanner-form.tsx`**: avviso se la valuta
+  rilevata ≠ EUR/USD (lasciata su EUR, da verificare).
+- **`TODO.md`**: Sprint 4 Scanner allineato (modello `2.5-flash`, output completo,
+  nota hardening S7).
+- Verifica: `tsc --noEmit` + `next lint` + `next build` **Exit 0** (16/16 route,
+  `next.config` accettato senza warning). In attesa di conferma per il commit.
+- ⚠️ Config lato tuo: `GEMINI_API_KEY` su Vercel + accesso al modello
+  `gemini-2.5-flash`.

@@ -26,6 +26,34 @@ export interface ReceiptExtraction {
 }
 
 /**
+ * Risultato tipizzato dell'estrazione. Ritorniamo un discriminated union invece di
+ * lanciare: le eccezioni delle Server Action vengono REDATTE in produzione da
+ * Next.js (il client riceve un messaggio generico), mentre `error` è un dato
+ * intenzionale che raggiunge sempre la UI.
+ */
+export type ReceiptExtractionResult =
+  | { ok: true; data: ReceiptExtraction }
+  | { ok: false; error: string };
+
+/** Mappa gli errori del client Gemini a messaggi chiari e azionabili. */
+function mapGeminiError(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  if (/\b401\b|api[_ ]?key|unauthenticated|permission|forbidden|\b403\b/i.test(msg)) {
+    return "Chiave Gemini non valida o non autorizzata a questo modello.";
+  }
+  if (/\b429\b|rate.?limit|quota|resource.?exhausted/i.test(msg)) {
+    return "Troppe richieste al servizio AI: riprova tra qualche istante.";
+  }
+  if (/timeout|network|fetch failed|ENOTFOUND|ECONNRESET|ETIMEDOUT/i.test(msg)) {
+    return "Problema di rete con il servizio AI: controlla la connessione e riprova.";
+  }
+  if (/safety|blocked|candidate/i.test(msg)) {
+    return "Il servizio AI non ha potuto analizzare l'immagine: prova con un'altra foto.";
+  }
+  return "Analisi non riuscita: riprova o inserisci i dati manualmente.";
+}
+
+/**
  * JSON Schema che vincola RIGOROSAMENTE l'output del modello: Gemini è forzato a
  * restituire solo questi campi (responseMimeType JSON + responseSchema).
  */
@@ -105,49 +133,60 @@ function parseImagePayload(input: string): { mimeType: string; data: string } {
  */
 export async function extractDataFromReceipt(
   base64Image: string,
-): Promise<ReceiptExtraction> {
+): Promise<ReceiptExtractionResult> {
   if (!base64Image) {
-    throw new Error("Immagine mancante: nessun dato da estrarre.");
+    return { ok: false, error: "Immagine mancante: nessun dato da estrarre." };
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    throw new Error(
-      "GEMINI_API_KEY non configurata: imposta la chiave in .env.local.",
-    );
+    return {
+      ok: false,
+      error: "Servizio AI non configurato (GEMINI_API_KEY mancante).",
+    };
   }
 
   const { mimeType, data } = parseImagePayload(base64Image);
-  const ai = new GoogleGenAI({ apiKey });
 
-  const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
-    contents: [
-      {
-        role: "user",
-        parts: [
-          { inlineData: { mimeType, data } },
-          { text: "Estrai i dati dell'abbonamento da questa ricevuta." },
-        ],
+  // Chiamata al modello isolata in try/catch: gli errori di rete/API (401/429/…)
+  // diventano `error` tipizzati anziché eccezioni redatte in produzione.
+  let raw: string | undefined;
+  try {
+    const ai = new GoogleGenAI({ apiKey });
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [
+        {
+          role: "user",
+          parts: [
+            { inlineData: { mimeType, data } },
+            { text: "Estrai i dati dell'abbonamento da questa ricevuta." },
+          ],
+        },
+      ],
+      config: {
+        systemInstruction: SYSTEM_INSTRUCTION,
+        responseMimeType: "application/json",
+        responseSchema: RECEIPT_SCHEMA,
       },
-    ],
-    config: {
-      systemInstruction: SYSTEM_INSTRUCTION,
-      responseMimeType: "application/json",
-      responseSchema: RECEIPT_SCHEMA,
-    },
-  });
+    });
+    raw = response.text;
+  } catch (err) {
+    return { ok: false, error: mapGeminiError(err) };
+  }
 
-  const raw = response.text;
   if (!raw) {
-    throw new Error("Il modello non ha restituito alcun dato dalla ricevuta.");
+    return {
+      ok: false,
+      error: "Il modello non ha restituito dati dalla ricevuta: riprova.",
+    };
   }
 
   let parsed: Partial<ReceiptExtraction>;
   try {
     parsed = JSON.parse(raw) as Partial<ReceiptExtraction>;
   } catch {
-    throw new Error("Risposta del modello non in formato JSON valido.");
+    return { ok: false, error: "Risposta del servizio AI non valida: riprova." };
   }
 
   // Normalizzazione difensiva: lo schema vincola già la forma, qui blindiamo i tipi.
@@ -168,13 +207,16 @@ export async function extractDataFromReceipt(
     parsed.documentType === "INVOICE" ? "INVOICE" : "RECEIPT";
 
   return {
-    name: String(parsed.name ?? "").trim(),
-    amount: Number(parsed.amount ?? 0),
-    currency: String(parsed.currency ?? "EUR").trim().toUpperCase(),
-    billingCycle,
-    nextRenewalDate,
-    vatRate,
-    amountIsGross,
-    documentType,
+    ok: true,
+    data: {
+      name: String(parsed.name ?? "").trim(),
+      amount: Number(parsed.amount ?? 0),
+      currency: String(parsed.currency ?? "EUR").trim().toUpperCase(),
+      billingCycle,
+      nextRenewalDate,
+      vatRate,
+      amountIsGross,
+      documentType,
+    },
   };
 }
