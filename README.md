@@ -8,8 +8,6 @@
 > **Stop guessing. Start tracking.** La piattaforma SaaS che trasforma il caos
 > dei tuoi abbonamenti in un singolo numero che conta: il **Monthly Burn Rate**.
 
-![Dashboard Preview](/public/preview.png)
-
 ---
 
 ## 💡 Perché SubSync
