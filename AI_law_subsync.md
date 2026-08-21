@@ -154,6 +154,8 @@ Indicizzate in `docs/Index.md`, che è il nodo centrale del grafo:
 | `Condivisione_Spese_e_Gruppi` | Condivisione, inviti, quote, settlement |
 | `Calcolo_IVA_e_Fisco` | Deducibilità, IVA, categorie di spesa |
 | `Lettura_Scontrini_OCR_Gemini` | Estrazione dati da fattura via Gemini |
+| `Soft_Delete_Abbonamenti` | Cessazione logica, filtri query, trend storico (progettato) |
+| `Email_Ingestion_e_Matching` | Webhook email, parsing, matching, aggiornamento automatico (progettato) |
 | `Interfaccia_Grafica_Dashboard` | Shell, famiglie di componenti, regole responsive |
 | `App_Mobile_e_Offline_PWA` | Manifest, service worker, installabilità |
 

@@ -71,8 +71,8 @@ Senza, la funzione risponde con l'errore mappato invece di rompere la pagina.
 ---
 
 ## Correlato
-[[Receipt Parser]] — il parser equivalente per il canale email, ancora da
-costruire, descritto in [[Gestione_Pagamenti_e_Rinnovi]].
+[[Email_Ingestion_e_Matching]] — il canale email riuserà lo stesso contratto di
+estrazione, cambiando la sorgente: immagine qui, corpo del messaggio là.
 
 ---
 

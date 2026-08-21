@@ -109,6 +109,9 @@ lavori ancora da fare.
 ### Domini applicativi
 [[Gestione_Pagamenti_e_Rinnovi]] · [[Condivisione_Spese_e_Gruppi]] · [[Calcolo_IVA_e_Fisco]] · [[Lettura_Scontrini_OCR_Gemini]]
 
+### In progettazione
+[[Soft_Delete_Abbonamenti]] · [[Email_Ingestion_e_Matching]]
+
 ### Interfaccia e distribuzione
 [[Interfaccia_Grafica_Dashboard]] · [[App_Mobile_e_Offline_PWA]]
 
@@ -121,41 +124,89 @@ singolo componente, ciclo di vita dei nodi fantasma) sono in `AI_law_subsync.md`
 
 ---
 
-## Schema relazionale (bozza)
+## Schema relazionale
 
 ```
-User (1) ──────< (N) Subscription (1) ──────< (N) PaymentLog
+User (1) ──< (N) Subscription (1) ──< (N) PaymentLog
+                      │
+                      └──< (N) SubscriptionMember >── (N) User
+User (1) ──< (N) ExpenseCategory ──< (N) Subscription
 ```
 
 - **User (1) → (N) Subscription**: un utente possiede molti abbonamenti.
 - **Subscription (1) → (N) PaymentLog**: ogni abbonamento ha uno storico pagamenti.
+- **Subscription (1) → (N) SubscriptionMember**: Split-Billing, i partecipanti con
+  cui la spesa è condivisa. Ogni membro può puntare a uno `User` reale, ma
+  l'invito nasce sull'email e può precedere l'account.
+- **ExpenseCategory (1) → (N) Subscription**: categorie di spesa con default
+  fiscali, opzionali sull'abbonamento.
 
 ### Entità
 
 #### `User`
-| Campo       | Tipo     | Note                |
-| ----------- | -------- | ------------------- |
-| `id`        | String   | PK (cuid)           |
-| `email`     | String   | univoco             |
-| `createdAt` | DateTime |                     |
+| Campo       | Tipo     | Note                                   |
+| ----------- | -------- | -------------------------------------- |
+| `id`        | String   | PK (cuid), allineato all'id Supabase   |
+| `email`     | String   | univoco                                |
+| `createdAt` | DateTime |                                        |
 
 #### `Subscription`
-| Campo             | Tipo        | Note                                  |
-| ----------------- | ----------- | ------------------------------------- |
-| `id`              | String      | PK                                    |
-| `userId`          | String      | FK → User                             |
-| `name`            | String      | Nome servizio (es. "Netflix")         |
-| `amount`          | **Decimal** | Importo (Regola 1 — mai float)        |
-| `currency`        | String      | es. "EUR"                             |
-| `billingCycle`    | Enum        | `MONTHLY` \| `YEARLY`                 |
-| `nextRenewalDate` | DateTime    | Forzata a 00:00:00 UTC (Regola 2)     |
-| `createdAt`       | DateTime    |                                       |
+| Campo               | Tipo        | Note                                       |
+| ------------------- | ----------- | ------------------------------------------ |
+| `id`                | String      | PK                                         |
+| `userId`            | String      | FK → User (`onDelete: Cascade`)            |
+| `name`              | String      | Nome servizio (es. "Netflix")              |
+| `amount`            | **Decimal** | `Decimal(12,2)` — Regola 1, mai float      |
+| `currency`          | String      | es. "EUR"                                  |
+| `billingCycle`      | Enum        | `MONTHLY` \| `YEARLY`                      |
+| `nextRenewalDate`   | DateTime    | Forzata a 00:00:00 UTC (Regola 2)          |
+| `createdAt`         | DateTime    |                                            |
+| `categoryId`        | String?     | FK → ExpenseCategory (opzionale)           |
+| `expenseNature`     | Enum        | `PERSONAL` \| `BUSINESS` \| `MIXED`        |
+| `amountIsGross`     | Boolean     | `amount` è IVA inclusa?                    |
+| `vatRate`           | **Decimal** | `Decimal(5,2)` — aliquota IVA %            |
+| `costDeductiblePct` | **Decimal** | `Decimal(5,2)` — deducibilità del costo    |
+| `vatDeductiblePct`  | **Decimal** | `Decimal(5,2)` — detraibilità dell'IVA     |
+| `documentType`      | Enum        | `NONE` \| fattura \| ricevuta              |
+
+> ⚠️ Manca una data di cessazione: la disdetta oggi cancella il record e con esso
+> lo storico. È il vincolo che il [[Soft_Delete_Abbonamenti]] va a rimuovere.
+
+#### `SubscriptionMember` (Split-Billing)
+| Campo            | Tipo        | Note                                            |
+| ---------------- | ----------- | ----------------------------------------------- |
+| `id`             | String      | PK                                              |
+| `subscriptionId` | String      | FK → Subscription (`onDelete: Cascade`)         |
+| `userId`         | String?     | FK → User — nullo finché l'invitato non esiste   |
+| `email`          | String      | destinatario dell'invito, chiave del matching   |
+| `status`         | Enum        | `PENDING` \| `ACCEPTED` \| `DECLINED`           |
+| `shareWeight`    | **Decimal** | `Decimal(12,4)` — peso della quota              |
+| `settled`        | Boolean     | il membro ha saldato la sua parte               |
+| `createdAt`      | DateTime    |                                                 |
+
+> Il proprietario **non** è una riga di questa tabella: è implicito, con peso 1,
+> e viene aggiunto al calcolo delle quote. Dettagli in
+> [[Condivisione_Spese_e_Gruppi]].
 
 #### `PaymentLog`
-| Campo            | Tipo        | Note                          |
-| ---------------- | ----------- | ----------------------------- |
-| `id`             | String      | PK                            |
-| `subscriptionId` | String      | FK → Subscription             |
-| `amount`         | **Decimal** | Importo pagato (Regola 1)     |
-| `paidAt`         | DateTime    | Data pagamento (UTC)          |
+| Campo            | Tipo        | Note                                    |
+| ---------------- | ----------- | --------------------------------------- |
+| `id`             | String      | PK                                      |
+| `subscriptionId` | String      | FK → Subscription (`onDelete: Cascade`) |
+| `amount`         | **Decimal** | `Decimal(12,2)` — Regola 1              |
+| `paidAt`         | DateTime    | Data pagamento (UTC)                    |
+
+#### `ExpenseCategory`
+| Campo                      | Tipo        | Note                                  |
+| -------------------------- | ----------- | ------------------------------------- |
+| `id`                       | String      | PK                                    |
+| `userId`                   | String      | FK → User                             |
+| `name`                     | String      | es. "Software aziendale"              |
+| `nature`                   | Enum        | `ExpenseNature` predefinita           |
+| `defaultCostDeductiblePct` | **Decimal** | deducibilità suggerita                |
+| `defaultVatRate`           | **Decimal** | aliquota IVA suggerita                |
+| `defaultVatDeductiblePct`  | **Decimal** | detraibilità IVA suggerita            |
+
+> Modellata ma non ancora operativa: nessuna Server Action né UI la usano.
+> Vedi [[Expense Category Actions]].
 

@@ -1,17 +1,61 @@
 # 🗺️ Roadmap — SubSync
 
-| Metadato         | Valore                                                                 |
-| ---------------- | ---------------------------------------------------------------------- |
-| **Last Updated** | 2026-07-15                                                             |
-| **Status**       | 🔴 **SPRINT 7 — Architettura Modulare & Responsive UI** è il nuovo focus principale (urgenza massima 🔴): refactoring modulare dei componenti + ristrutturazione **Mobile-First** con i breakpoint Tailwind (`sm:`/`md:`/`lg:`). App **LIVE e stabile su Vercel** (Sprint 6 completato: auth SSR, DB Supabase via Prisma, CI GitHub Actions, unit test Vitest). Backlog invariato: Fiscalità & Ottimizzazione (S5), Email Ingestion (S4), residui S3 (cache read-only, Lighthouse). |
+| Metadato         | Valore |
+| ---------------- | ------ |
+| **Last Updated** | 2026-08-21 |
+| **Sprint attivo** | 🔴 **SPRINT 8 — Integrità dello Storico & Aggiornamento Automatico** |
+| **Status**       | App **LIVE e stabile su Vercel**. Sprint 1, 2, 6 e 7 completati. Sprint 3, 4 e 5 chiusi sul consegnato, con i residui spostati nel **Backlog consolidato** in fondo. Il focus passa dall'interfaccia ai dati: prima la cessazione logica degli abbonamenti (senza cui lo storico del trend è inattendibile), poi l'ingestione email che tiene prezzi e rinnovi aggiornati da soli. |
 | **Goal**         | Tracciare gli abbonamenti e calcolare il **Monthly Burn Rate** normalizzato, con importi monetari accurati (Decimal) e date timezone-safe (00:00:00 UTC). |
-| **Pipeline**     | 6 Sprint a granularità fine — micro-cicli specializzati per prevenire il degrado del contesto. |
+| **Pipeline**     | Sprint a granularità fine — micro-cicli specializzati per prevenire il degrado del contesto. Un solo Sprint attivo alla volta. |
 
 > **Direttiva per l'agente:** questo file è la fonte di verità sullo stato di
 > avanzamento. Ogni volta che una funzionalità viene completata, la relativa
 > task va spuntata (`- [x]`) autonomamente, aggiornando anche **Last Updated** e
 > **Status**. Uno Sprint è concluso solo quando **tutte** le sue sotto-task sono
-> spuntate. Un solo Sprint attivo alla volta: niente lavoro fuori contesto.
+> spuntate, oppure quando i residui vengono spostati nel Backlog con motivazione.
+> Le regole operative stanno in `AI_law_subsync.md`, non qui.
+
+---
+
+## 🔴 SPRINT 8 — Integrità dello Storico & Aggiornamento Automatico `[ATTIVO]`
+
+> 🔴 Due obiettivi in sequenza, non in parallelo. Il primo è una precondizione
+> del secondo: il matching delle ricevute deve poter distinguere un abbonamento
+> attivo da uno cessato, e oggi i cessati semplicemente non esistono più.
+
+### 1️⃣ Soft-Delete abbonamenti 🔴 → [[Soft_Delete_Abbonamenti]]
+
+_Priorità assoluta. Finché la disdetta cancella il record, il grafico del trend
+racconta una storia falsa: non mostra la spesa che scende, mostra un passato
+riscritto._
+
+- [ ] ⚠️ Schema Prisma — campo `canceledAt DateTime?` su `Subscription` (`null` = attivo)
+- [ ] Migrazione additiva (campo nullable, nessun backfill sui record esistenti)
+- [ ] ⚠️ `canceledAt` normalizzata a **00:00:00 UTC** pre-salvataggio (Regola 2)
+- [ ] Separare in `lib/data/` la lettura degli **attivi** da quella che include i **cessati** → [[Database_Tabelle_e_Modelli_Prisma]]
+- [ ] Filtro `canceledAt: null` su lista, Burn Rate, cron rinnovi e Split-Billing
+- [ ] Trend di spesa: **nessun filtro**, condizione di appartenenza al mese estesa a intervallo (`createdAt < inizio(M+1)` E `canceledAt` nullo o `>= inizio(M)`)
+- [ ] Test dell'helper puro sul nuovo intervallo, incluso il caso "cessato a metà finestra"
+- [ ] `deleteSubscription` → **disattivazione** con possibilità di riattivare; dialog di conferma riformulato → [[Interfaccia_Grafica_Dashboard]]
+- [ ] ♻️ `revalidatePath` su disattivazione e riattivazione (Regola 3)
+- [ ] Decisione di prodotto: se servi anche una cancellazione definitiva per i record inseriti per errore
+
+### 2️⃣ Email Ingestion & Payment Matcher 🟡 → [[Email_Ingestion_e_Matching]]
+
+_La killer feature: le ricevute arrivano già per email a ogni rinnovo.
+Intercettarle rende il Burn Rate un dato vivo invece di una fotografia del
+giorno dell'inserimento._
+
+- [ ] Decisioni di modello da chiudere **prima** del codice: identificativo del messaggio processato (idempotenza) e forma della proposta in attesa di conferma → [[Database_Tabelle_e_Modelli_Prisma]]
+- [ ] 🔐 Endpoint **webhook** di ricezione, autenticato con segreto condiviso e con limite di payload
+- [ ] 🔐 Riconducibilità dell'email a uno `User` (indirizzo di inoltro dedicato o token nell'indirizzo)
+- [ ] Idempotenza: lo stesso messaggio, riconsegnato dal provider, non deve produrre due `PaymentLog`
+- [ ] Parsing di nome, importo, valuta e data — riuso del contratto di estrazione già in uso per lo scanner → [[Lettura_Scontrini_OCR_Gemini]]
+- [ ] ⚠️ Importi in `Decimal`, date a 00:00:00 UTC prima di toccare il DB (Regole 1 e 2)
+- [ ] **Matching a punteggio con soglia** (nome normalizzato + importo + prossimità al rinnovo atteso), solo fra abbonamenti attivi
+- [ ] Sopra soglia: `PaymentLog`, **aggiornamento del prezzo** se differisce, allineamento di `nextRenewalDate` + ♻️ `revalidatePath`
+- [ ] Notifica all'utente quando un prezzo cambia: un aumento non deve restare silenzioso a sua volta
+- [ ] Sotto soglia: proposta da confermare, mai creazione d'autorità
 
 ---
 
@@ -72,7 +116,7 @@
 
 ---
 
-## 🟡 SPRINT 3 — PWA & Mobile Optimization
+## 🟢 SPRINT 3 — PWA & Mobile Optimization `[CHIUSO SUL CONSEGNATO]`
 
 > 🟡 Da web app a prodotto installabile, fruibile e resiliente in mobilità.
 
@@ -85,24 +129,21 @@
 ### Offline & Service Worker
 - [x] **Service Worker** (`public/sw.js`) — cache-first su asset statici (`/_next/static` + icone)
 - [x] **Offline fallback** — `public/offline.html` + navigations network-first con fallback
-- [ ] Strategia di cache per le viste read-only del Burn Rate _(viste autenticate/dinamiche: da progettare)_ → [[Burn Rate Offline Cache]]
+- [ ] Strategia di cache per le viste read-only del Burn Rate — _spostata nel **Backlog consolidato**_ → [[Burn Rate Offline Cache]]
 
 ### Meta & UX mobile
 - [x] Meta tag **iOS/Android** (`apple-mobile-web-app-*`, `theme-color`, `viewport-fit=cover`)
 - [x] Componente **Install Prompt** (A2HS) — banner dedicato su `beforeinstallprompt`
-- [ ] Lighthouse PWA ≥ 90 _(da eseguire manualmente su build prod; audit responsive → SPRINT 7)_ → [[Lighthouse Audit]]
+- [ ] Lighthouse PWA 90+ — _spostata nel **Backlog consolidato**_ → [[Lighthouse Audit]]
 
 ---
 
-## 🟡 SPRINT 4 — Asynchronous Automations
+## ✅ SPRINT 4 — Asynchronous Automations `[CHIUSO SUL CONSEGNATO]`
 
 > 🟡 Automazioni che eliminano l'inserimento manuale e tengono i dati sempre freschi.
-
-### 📥 Email Ingestion
-- [ ] Endpoint **webhook** ricezione email (provider inbound, es. mailbox dedicata) → [[Email Webhook]]
-- [ ] Parser fatture/ricevute → estrazione `name` / `amount` / `paidAt` → [[Receipt Parser]]
-- [ ] ⚠️ Persistenza `PaymentLog` con `amount` Decimal e `paidAt` in UTC → [[Database_Tabelle_e_Modelli_Prisma]]
-- [ ] Matching automatico ricevuta → `Subscription` esistente → [[Payment Matcher]]
+>
+> 📥 L'**Email Ingestion** originariamente prevista qui è stata promossa a
+> obiettivo di primo piano: vedi **Sprint 8**.
 
 ### ⏰ Cron Job rinnovi
 - [x] Endpoint locale di test `/api/cron/renewals` (route handler) — testato (401/200)
@@ -116,12 +157,11 @@
 - [x] Integrazione UI: Dropzone (`react-dropzone`) nel form `/subscriptions/new` — componente `image-scanner` + wrapper `subscription-scanner-form`.
 - [x] Server Action: `actions/vision.actions.ts` — SDK ufficiale **Google Gemini** (`@google/genai`, modello `gemini-2.5-flash`), immagine via `inlineData`; chiave da `GEMINI_API_KEY`.
 - [x] Prompt Engineering: `systemInstruction` + output vincolato con `responseMimeType: application/json` e `responseSchema` (JSON Schema rigoroso) → `{ name, amount, currency, billingCycle, nextRenewalDate, vatRate, amountIsGross, documentType }`.
-- [x] Hardening (S7): compressione immagine client (`<canvas>`) + `serverActions.bodySizeLimit` 4mb + `maxSize` dropzone; ritorno tipizzato `{ ok, data|error }` con mappatura errori Gemini (401/429/rete); anteprima thumbnail + annulla; fallback valuta ≠ EUR/USD.
 - [x] Auto-fill: JSON cablato ai campi del form via handle imperativo (`setValue`-like su form controllato); toast "Fattura analizzata! Controlla i dati prima di salvare."
 
 ---
 
-## 🟡 SPRINT 5 — Enterprise & B2B Features
+## 🟢 SPRINT 5 — Enterprise & B2B Features `[CHIUSO SUL CONSEGNATO]`
 
 > 🟢 Feature ad alto valore aggiunto che differenziano il prodotto (post-MVP).
 
@@ -132,9 +172,9 @@
 - _Nota: il Monthly Burn Rate resta sul costo degli abbonamenti posseduti (Regola 4 invariata in questo pass)._
 
 ### Fiscalità & Ottimizzazione
-- [ ] Modulo **deducibilità fiscale** per freelance / Partita IVA → [[Calcolo_IVA_e_Fisco]] (calcolo pronto) + [[Fiscal Breakdown View]] + [[Expense Category Actions]]
-- [ ] **Suggeritore switch** mensile → annuale quando conviene (calcolo risparmio in Decimal) — _design scelto: campo `altCyclePrice` opzionale sulla Subscription_ → [[Switch Suggester]]
-- [ ] Normalizzazione multi-valuta per aggregazioni cross-currency — _design scelto: API di cambio live + caching_ → [[Currency Normalizer]]
+_Residui spostati nel **Backlog consolidato**: il motore di calcolo fiscale esiste
+in `lib/fiscal.ts` ma non è collegato a nulla, e le due ottimizzazioni sono
+progetti a sé. Vedi [[Calcolo_IVA_e_Fisco]]._
 
 ---
 
@@ -155,14 +195,69 @@
 
 ---
 
-## 🔴 SPRINT 7 — Architettura Modulare & Responsive UI
+## ✅ SPRINT 7 — Architettura Modulare, Legale & Sistema Documentale `[COMPLETATO]`
 
-> 🔴 Urgenza massima. Ristrutturazione dell'interfaccia per garantire una fruizione perfetta su smartphone e frammentazione dei componenti per alleggerire il carico sui file sorgente. Vincolo di riferimento: **Regola 5** (`ARCHITECTURE.md`).
+> 🔴 Sprint di consolidamento: hardening dello scanner, pagine legali definitive,
+> grafico del trend riscritto e riordino completo di regole e documentazione.
+> I residui di refactoring UI sono stati spostati nel **Backlog consolidato**:
+> non bloccano il lavoro sui dati e verranno ripresi dopo lo Sprint 8.
 
-- [ ] **Refactoring modulare**: Isolare le sezioni complesse di `/subscriptions` e della Dashboard in micro-componenti UI dedicati. → [[Interfaccia_Grafica_Dashboard]]
-- [ ] **Implementazione Mobile-First**: Ristrutturare layout, griglie e flussi utilizzando i breakpoint Tailwind (`sm:`, `md:`, `lg:`). → [[Interfaccia_Grafica_Dashboard]], [[Motore_Regole_NextJS]]
-- [ ] **Ottimizzazione Navigazione**: Adattare la sidebar/header per dispositivi touch (es. menu a comparsa o bottom navigation). → [[Interfaccia_Grafica_Dashboard]]
-- [ ] **Audit Visivo**: Risolvere eventuali overflow orizzontali e ottimizzare i padding su viewport mobili. → [[Interfaccia_Grafica_Dashboard]]
+### Scanner IA — hardening
+- [x] Compressione immagine client-side (`<canvas>`) + `serverActions.bodySizeLimit` 4mb + `maxSize` sulla dropzone
+- [x] Ritorno tipizzato `{ ok, data | error }` con mappatura degli errori Gemini (401 / 429 / rete / safety / JSON invalido)
+- [x] Anteprima thumbnail con annulla + avviso su valuta diversa da EUR/USD
+- [x] Collaudo manuale superato: compressione funzionante, campi popolati correttamente
+
+### Pagine legali
+- [x] Testi definitivi di Privacy Policy e Termini di Servizio, richiesti per la verifica del consenso Google OAuth
+- [x] 🔐 Copertura di **entrambi** i percorsi di autenticazione (Google OAuth e registrazione diretta con email e password), allineati a quanto realmente attivo in `actions/auth.actions.ts`
+
+### Trend di spesa
+- [x] Metrica riallineata al Burn Rate: costo mensile **normalizzato** (annuale / 12) al posto dell'aggregazione dei `PaymentLog` reali → [[Gestione_Pagamenti_e_Rinnovi]]
+- [x] ⚠️ Aritmetica in `Decimal` senza arrotondamenti intermedi: l'ultimo punto della serie coincide col KPI
+- [x] Helper puro `lib/spending-trend.ts` + 8 test dedicati
+- [x] Grafico riscritto con **Recharts** (`BarChart`, dati discreti) → [[Interfaccia_Grafica_Dashboard]]
+- [x] ⚡ Code-splitting con `next/dynamic` e `ssr: false`: First Load JS della dashboard da 196 kB a **88,7 kB**
+
+### Sistema documentale
+- [x] `AI_law_subsync.md` — documento normativo unico (Legge 0, Regole 1-7, direttive, convenzioni, vincoli d'ambiente); `ARCHITECTURE.md` ridotto a documento tecnico
+- [x] Regola 7 riscritta: log **modulari** in `.agent-logs/AAAA-MM-GG_slug.md`, changelog cumulativo abolito e diviso senza perdita di contenuto
+- [x] Documentazione a **macro-aree** in `docs/` con nomi descrittivi, indicizzate da [[Index]]
+- [x] `.obsidian/` aggiunta a `.gitignore`
+
+---
+
+## 📋 Backlog consolidato
+
+> Residui degli Sprint 3, 5 e 7, raccolti qui invece di lasciare sprint chiusi a
+> metà. Nessuno di questi blocca lo Sprint 8: si ripescano a obiettivo raggiunto,
+> per tema e non per sprint di provenienza.
+
+### 🎨 UI Mobile-First 🔴 _(da Sprint 7)_
+
+_Priorità alta ma non bloccante: l'app è usabile su mobile, il debito è di
+struttura del codice e di rifinitura._
+
+- [ ] **Refactoring modulare**: isolare le sezioni complesse di `/subscriptions` e della Dashboard in micro-componenti (Regola 5) → [[Interfaccia_Grafica_Dashboard]]
+- [ ] **Mobile-First**: ristrutturare layout e griglie sui breakpoint Tailwind (Regola 6) → [[Interfaccia_Grafica_Dashboard]], [[Motore_Regole_NextJS]]
+- [ ] **Navigazione touch**: valutare bottom navigation al posto del drawer → [[Interfaccia_Grafica_Dashboard]]
+- [ ] **Audit visivo**: overflow orizzontali e padding sui viewport stretti
+
+### 🧾 Fiscalità 🟡 _(da Sprint 5)_
+
+_Il motore di calcolo è scritto e corretto, ma non è importato da nessun file:
+è un ramo del grafo che parte e si interrompe._
+
+- [ ] Collegare `computeFiscalBreakdown` alle Server Action e alla UI → [[Fiscal Breakdown View]]
+- [ ] CRUD delle categorie di spesa e applicazione dei default al form → [[Expense Category Actions]]
+- [ ] **Suggeritore switch** mensile → annuale — _design scelto: campo `altCyclePrice` opzionale su `Subscription`_ → [[Switch Suggester]]
+- [ ] Normalizzazione multi-valuta — _design scelto: API di cambio live + caching_ → [[Currency Normalizer]]
+
+### 📲 PWA 🟢 _(da Sprint 3)_
+
+- [ ] Strategia di cache per le viste read-only del Burn Rate — le viste autenticate sono dinamiche, va deciso cosa è lecito conservare sul dispositivo → [[Burn Rate Offline Cache]]
+- [ ] Lighthouse PWA 90+ su build di produzione → [[Lighthouse Audit]]
+- [ ] Startup image iOS dedicate
 
 ---
 
@@ -178,7 +273,7 @@
 | ⚠️       | Vincolo architetturale tassativo (vedi `ARCHITECTURE.md`)     |
 | ♻️       | Invalidazione cache richiesta (`revalidatePath`)              |
 | 🔐       | Task con implicazioni di sicurezza                            |
-| `[[X]]`  | Nodo del grafo Obsidian — le macro-aree sono indicizzate in `docs/Index.md`; se la nota non esiste è un **ghost**, cioè lavoro ancora da fare |
+| `[[X]]`  | Nodo del grafo Obsidian — le note sono indicizzate in `docs/Index.md`; se la nota non esiste è un **ghost**, cioè lavoro non ancora progettato |
 
 ---
 

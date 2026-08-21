@@ -29,6 +29,15 @@ Cosa fa il prodotto.
 | [[Calcolo_IVA_e_Fisco]] | Deducibilità, IVA, categorie di spesa. **Incompleto** |
 | [[Lettura_Scontrini_OCR_Gemini]] | Estrazione dati da fattura via Gemini, auto-fill del form |
 
+## In progettazione
+
+Aree già disegnate ma non ancora implementate: la nota esiste, il codice no.
+
+| Area | Copre | Priorità |
+| ---- | ----- | -------- |
+| [[Soft_Delete_Abbonamenti]] | Campo `canceledAt`, filtri delle query, trend che può finalmente scendere | 🔴 prossimo |
+| [[Email_Ingestion_e_Matching]] | Webhook, parsing, matching, aggiornamento automatico di prezzo e rinnovo | 🟡 a seguire |
+
 ## Interfaccia e distribuzione
 
 | Area | Copre |
@@ -48,11 +57,6 @@ I nodi qui sotto sono **ghost**: compaiono nel grafo come cerchi vuoti perché
 nessuna nota li descrive ancora. Sono lavoro pianificato, non documentazione
 mancante.
 
-### Ingestione email
-[[Email Webhook]] · [[Receipt Parser]] · [[Payment Matcher]]
-Secondo canale di alimentazione dei pagamenti, oltre al cron. Vedi
-[[Gestione_Pagamenti_e_Rinnovi]].
-
 ### Fiscalità
 [[Fiscal Breakdown View]] · [[Expense Category Actions]]
 Il motore di calcolo esiste ma non è collegato a nulla. Vedi [[Calcolo_IVA_e_Fisco]].
@@ -61,10 +65,6 @@ Il motore di calcolo esiste ma non è collegato a nulla. Vedi [[Calcolo_IVA_e_Fi
 [[Switch Suggester]] · [[Currency Normalizer]]
 Suggerimento del cambio ciclo e aggregazioni multi-valuta.
 
-### Storico
-[[Storico Cessazioni Abbonamenti]]
-Cancellazione logica su `Subscription`: senza, il trend a 6 mesi non può mostrare
-le disdette passate. Vedi [[Gestione_Pagamenti_e_Rinnovi]].
 
 ### PWA
 [[Burn Rate Offline Cache]] · [[Lighthouse Audit]]

@@ -30,6 +30,8 @@ Entità centrale. Oltre ai campi anagrafici porta due gruppi di attributi:
   percentuali di deducibilità e detraibilità, tipo di documento.
   Il loro uso è descritto in [[Calcolo_IVA_e_Fisco]]
 
+⚠️ Manca una data di cessazione: vedi [[Soft_Delete_Abbonamenti]].
+
 ### `PaymentLog`
 Storico dei pagamenti effettivi, alimentato dal cron dei rinnovi di
 [[Gestione_Pagamenti_e_Rinnovi]] e, in futuro, dal canale email.
@@ -106,8 +108,14 @@ seconda del fuso del browser. Il modulo espone anche l'avanzamento del ciclo,
 usato dal cron.
 
 ### Lavori aperti
-La normalizzazione multi-valuta per aggregazioni cross-currency non esiste ancora:
-[[Currency Normalizer]].
+- Cessazione logica degli abbonamenti: il campo `canceledAt` non esiste ancora, e
+  senza di esso la disdetta cancella il record e con esso lo storico. È il
+  prossimo intervento sullo schema, progettato in [[Soft_Delete_Abbonamenti]].
+- Tracciamento dei messaggi email già processati e forma della proposta in attesa
+  di conferma: due decisioni di modello da chiudere prima del webhook, vedi
+  [[Email_Ingestion_e_Matching]].
+- Normalizzazione multi-valuta per aggregazioni cross-currency:
+  [[Currency Normalizer]].
 
 ---
 

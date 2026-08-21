@@ -45,7 +45,7 @@ Un abbonamento entra in un mese se esisteva in un qualsiasi istante di quel mese
 cancellazione rimuove il record: la serie ricostruibile è quindi **non
 decrescente**, mostra la crescita della spesa ricorrente ma non le disdette
 passate. Renderla esatta richiede una cancellazione logica sullo schema, vedi
-[[Storico Cessazioni Abbonamenti]].
+[[Soft_Delete_Abbonamenti]], progettato e prossimo in roadmap.
 
 L'aritmetica sta in un helper puro e testato, non nella Server Action.
 
@@ -86,13 +86,9 @@ già risolto. Oggi l'unica sorgente dei log è il cron.
 ## Lavori aperti
 
 Il secondo canale di alimentazione dei pagamenti, l'ingestione via email, non
-esiste ancora. Tre nodi da costruire:
-
-- [[Email Webhook]] — endpoint di ricezione da provider inbound
-- [[Receipt Parser]] — estrazione dei dati dalla ricevuta, controparte email dello
-  scanner descritto in [[Lettura_Scontrini_OCR_Gemini]]
-- [[Payment Matcher]] — associazione automatica della ricevuta all'abbonamento
-  esistente
+esiste ancora: riceverà le ricevute per posta, le assocerà agli abbonamenti
+esistenti e ne aggiornerà prezzo e data di rinnovo da sola. Flusso completo e
+punti aperti in [[Email_Ingestion_e_Matching]].
 
 Sul fronte ottimizzazione manca il [[Switch Suggester]], che confronta il costo
 mensile con quello annuale e segnala quando conviene cambiare ciclo.

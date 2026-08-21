@@ -29,10 +29,13 @@ Un'unica fonte di verità sul tuo Burn Rate, sul desktop e in tasca.
 | 🔥 | **Monthly Burn Rate** | Spesa ricorrente normalizzata a costo mensile, aggregata server-side. |
 | 💳 | **Gestione Abbonamenti** | CRUD completo: servizio, importo, valuta, ciclo, prossimo rinnovo. |
 | 🧾 | **Storico Pagamenti** | Timeline cronologica delle uscite di cassa per abbonamento. |
-| 📲 | **PWA & Offline** | Installabile su iOS/Android, fallback offline _(roadmap)_. |
-| 📥 | **Email Ingestion** | Parsing automatico di fatture e ricevute via webhook _(roadmap)_. |
-| ⏰ | **Rinnovi Automatici** | Cron job che avanza le date di rinnovo e logga i pagamenti _(roadmap)_. |
-| 🤝 | **Split-Billing & Fisco** | Condivisione spese e deducibilità per Partita IVA _(roadmap B2B)_. |
+| 📲 | **PWA & Offline** | Installabile su iOS/Android, service worker con fallback offline. |
+| 👁️ | **Scanner IA Ricevute** | Estrazione automatica dei dati da foto di fattura via Google Gemini. |
+| 📈 | **Trend di Spesa** | Andamento a 6 mesi del costo normalizzato, coerente col Burn Rate. |
+| 📥 | **Email Ingestion** | Aggiornamento automatico di prezzi e rinnovi da ricevute email _(in progettazione)_. |
+| ⏰ | **Rinnovi Automatici** | Cron job giornaliero che avanza le date di rinnovo e logga i pagamenti. |
+| 🤝 | **Split-Billing** | Condivisione spese fra utenti: inviti, quote in Decimal, settlement. |
+| 🧾 | **Fiscalità** | Deducibilità e IVA per Partita IVA _(motore pronto, UI in backlog)_. |
 | 🔐 | **Auth Supabase** | Sessione sicura via cookie (SSR, App Router). |
 
 ---
@@ -42,7 +45,10 @@ Un'unica fonte di verità sul tuo Burn Rate, sul desktop e in tasca.
 - **Next.js 14** (App Router) · **TypeScript**
 - **Prisma ORM** · **PostgreSQL** (via Docker)
 - **Supabase** (Auth SSR via `@supabase/ssr`)
-- **Tailwind CSS** · **Lucide React** (icone)
+- **Tailwind CSS** · **Lucide React** (icone) · **Recharts** (grafici)
+- **Google Gemini** (`@google/genai`) per lo scanner ricevute
+- **Vitest** (unit test sugli helper monetari e di data)
+- **Vercel** (hosting, cron job) — app live in produzione
 - **pnpm** (package manager)
 
 ---
@@ -83,10 +89,15 @@ importi monetari sempre in `Decimal` (mai float), date di rinnovo forzate a
 `00:00:00 UTC`, invalidazione cache su ogni mutazione, aggregazione del Burn Rate
 isolata sul server.
 
-👉 La trattazione tecnica completa è in **[ARCHITECTURE.md](ARCHITECTURE.md)** —
-lettura obbligatoria prima di contribuire al codice.
+👉 Le regole vivono in **[AI_law_subsync.md](AI_law_subsync.md)**, unico documento
+normativo del progetto: **lettura obbligatoria e integrale prima di toccare il
+codice**. La struttura tecnica (cartelle, schema relazionale, mappa della
+documentazione) è in **[ARCHITECTURE.md](ARCHITECTURE.md)**, e le note di
+dominio in **[docs/](docs/)**, navigabili come grafo con Obsidian.
 
-La roadmap di prodotto, suddivisa in 6 Sprint, è in **[TODO.md](TODO.md)**.
+La roadmap di prodotto è in **[TODO.md](TODO.md)**: gli Sprint 1-7 sono chiusi,
+lo **Sprint 8** in corso porta la cessazione logica degli abbonamenti e
+l'ingestione email.
 
 ---
 
