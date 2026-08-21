@@ -24,6 +24,7 @@ export interface SubscriptionDTO {
   billingCycle: BillingCycle;
   nextRenewalDate: string; // ISO 8601 (UTC)
   createdAt: string; // ISO 8601 (UTC)
+  canceledAt: string | null; // ISO 8601 (UTC) — null = attivo (soft-delete)
 
   // ─── Fiscalità (Sprint 7) — Decimal serializzati a stringa (Regola 1) ───
   expenseNature: ExpenseNature;
@@ -75,6 +76,7 @@ export function toSubscriptionDTO(s: Subscription): SubscriptionDTO {
     billingCycle: s.billingCycle,
     nextRenewalDate: s.nextRenewalDate.toISOString(),
     createdAt: s.createdAt.toISOString(),
+    canceledAt: s.canceledAt?.toISOString() ?? null,
     expenseNature: s.expenseNature,
     categoryId: s.categoryId,
     amountIsGross: s.amountIsGross,

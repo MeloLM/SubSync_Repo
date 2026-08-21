@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { Pencil, Users } from "lucide-react";
 
-import { DeleteSubscriptionButton } from "@/components/subscriptions/delete-subscription-button";
+import { CancelSubscriptionButton } from "@/components/subscriptions/cancel-subscription-button";
 
 /**
  * Cluster di azioni per un abbonamento (condividi / modifica / elimina).
  * Riusato sia dalla card mobile sia dalla riga della tabella desktop.
- * Server Component: la sola foglia interattiva è `DeleteSubscriptionButton`.
+ * Server Component: la sola foglia interattiva è `CancelSubscriptionButton`.
  */
 export function SubscriptionActions({ id, name }: { id: string; name: string }) {
   const iconBtn =
@@ -27,7 +27,7 @@ export function SubscriptionActions({ id, name }: { id: string; name: string }) 
       >
         <Pencil className="h-4 w-4" />
       </Link>
-      <DeleteSubscriptionButton id={id} name={name} />
+      <CancelSubscriptionButton id={id} name={name} />
     </div>
   );
 }

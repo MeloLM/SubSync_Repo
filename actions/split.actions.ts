@@ -8,6 +8,7 @@ import { ZERO, money } from "@/lib/money";
 import { computeShares } from "@/lib/split";
 import { getCurrentUser, getCurrentUserId } from "@/lib/auth";
 import { getSubscriptionByIdForUser } from "@/lib/data/subscriptions";
+import { isActive } from "@/lib/subscription-status";
 import {
   getMembersBySubscription,
   getPendingInvitesForEmail,
@@ -131,6 +132,10 @@ export async function inviteMember(
 
   const subscription = await getSubscriptionByIdForUser(subscriptionId, user.id);
   if (!subscription) throw new Error("Abbonamento non trovato o non autorizzato.");
+  // Soft-delete: non si invita qualcuno su un abbonamento già disdetto.
+  if (!isActive(subscription)) {
+    throw new Error("Abbonamento disattivato: riattivalo per invitare partecipanti.");
+  }
 
   const weight = money(shareWeight);
   if (weight.lte(ZERO)) throw new Error("La quota deve essere maggiore di zero.");

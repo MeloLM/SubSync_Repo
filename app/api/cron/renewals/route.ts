@@ -30,7 +30,8 @@ export async function GET(request: Request) {
 
   const now = new Date();
   const due = await prisma.subscription.findMany({
-    where: { nextRenewalDate: { lte: now } },
+    // Soft-delete: un abbonamento disdetto non si rinnova e non genera pagamenti.
+    where: { nextRenewalDate: { lte: now }, canceledAt: null },
   });
 
   let paymentsCreated = 0;

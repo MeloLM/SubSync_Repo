@@ -1,5 +1,6 @@
 import type { BillingCycle } from "@/lib/generated/prisma";
 import { ZERO, type Money } from "@/lib/money";
+import { wasActiveInPeriod } from "@/lib/subscription-status";
 
 /**
  * Trend di spesa normalizzato — helper puro (Regola 1: tutto in Decimal).
@@ -17,6 +18,7 @@ export interface TrendSubscriptionInput {
   amount: Money;
   billingCycle: BillingCycle;
   createdAt: Date;
+  canceledAt: Date | null;
 }
 
 /** Un mese della serie, con totale ancora in Decimal (serializzato dal chiamante). */
@@ -74,14 +76,14 @@ function buildWindow(now: Date, months: number) {
 /**
  * Serie del costo mensile normalizzato sugli ultimi `months` mesi.
  *
- * Un abbonamento contribuisce a un mese se esisteva in un qualsiasi istante di
- * quel mese, cioè se `createdAt` precede l'inizio del mese successivo.
+ * Un abbonamento contribuisce a un mese se era attivo in un qualsiasi istante di
+ * quel mese: creato prima della fine del mese e non ancora cessato al suo inizio.
  *
- * ⚠️ Limite del modello dati: `Subscription` conserva solo `createdAt`, non una
- * data di cessazione, e la cancellazione rimuove il record. La serie storica
- * ricostruibile è quindi non decrescente: mostra quando la spesa ricorrente è
- * cresciuta, non eventuali disdette passate. Renderla esatta richiederebbe una
- * cancellazione logica (`canceledAt`) sullo schema.
+ * ⚠️ È l'**unico** consumatore che riceve anche gli abbonamenti cessati. Tutti
+ * gli altri filtrano con `onlyActive`. Passare qui una lista già filtrata
+ * riporterebbe la serie a essere non decrescente, cioè al bug che il soft-delete
+ * è servito a risolvere: il grafico tornerebbe a riscrivere il passato invece di
+ * mostrare la spesa che scende.
  */
 export function computeNormalizedTrend(
   subscriptions: TrendSubscriptionInput[],
@@ -91,7 +93,7 @@ export function computeNormalizedTrend(
   return buildWindow(now, months).map(({ start, nextStart }) => {
     let total = ZERO;
     for (const sub of subscriptions) {
-      if (sub.createdAt < nextStart) {
+      if (wasActiveInPeriod(sub, start, nextStart)) {
         total = total.add(normalizedMonthlyCost(sub));
       }
     }

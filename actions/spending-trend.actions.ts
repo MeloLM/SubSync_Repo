@@ -33,6 +33,8 @@ export async function getSpendingTrend(): Promise<SpendingTrendDTO> {
   const userId = await getCurrentUserId();
   const subscriptions = await getSubscriptionsByUser(userId);
 
+  // ⚠️ Nessun filtro sugli attivi: il trend ha bisogno anche dei cessati, per
+  // sapere in quali mesi contribuivano. È l'unica lettura del progetto che li vuole.
   const months = computeNormalizedTrend(subscriptions, new Date(), WINDOW_MONTHS);
 
   let windowTotal = ZERO;

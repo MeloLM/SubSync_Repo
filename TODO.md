@@ -29,15 +29,16 @@ _Priorità assoluta. Finché la disdetta cancella il record, il grafico del tren
 racconta una storia falsa: non mostra la spesa che scende, mostra un passato
 riscritto._
 
-- [ ] ⚠️ Schema Prisma — campo `canceledAt DateTime?` su `Subscription` (`null` = attivo)
-- [ ] Migrazione additiva (campo nullable, nessun backfill sui record esistenti)
-- [ ] ⚠️ `canceledAt` normalizzata a **00:00:00 UTC** pre-salvataggio (Regola 2)
-- [ ] Separare in `lib/data/` la lettura degli **attivi** da quella che include i **cessati** → [[Database_Tabelle_e_Modelli_Prisma]]
-- [ ] Filtro `canceledAt: null` su lista, Burn Rate, cron rinnovi e Split-Billing
-- [ ] Trend di spesa: **nessun filtro**, condizione di appartenenza al mese estesa a intervallo (`createdAt < inizio(M+1)` E `canceledAt` nullo o `>= inizio(M)`)
-- [ ] Test dell'helper puro sul nuovo intervallo, incluso il caso "cessato a metà finestra"
-- [ ] `deleteSubscription` → **disattivazione** con possibilità di riattivare; dialog di conferma riformulato → [[Interfaccia_Grafica_Dashboard]]
-- [ ] ♻️ `revalidatePath` su disattivazione e riattivazione (Regola 3)
+- [x] ⚠️ Schema Prisma — campo `canceledAt DateTime?` su `Subscription` (`null` = attivo)
+- [x] Migrazione additiva `20260821131412_add_canceled_at` — applicata su Supabase con `migrate deploy` (non `migrate dev`: non esiste un DB locale)
+- [x] ⚠️ `canceledAt` normalizzata a **00:00:00 UTC** pre-salvataggio (Regola 2)
+- [x] Fetcher **unico** senza filtro + `lib/subscription-status.ts` come unico punto del filtro (`isActive`, `onlyActive`, `wasActiveInPeriod`) → [[Database_Tabelle_e_Modelli_Prisma]]
+- [x] Filtro attivi applicato a lista, Burn Rate, cron rinnovi e inviti Split-Billing
+- [x] Trend di spesa: **nessun filtro**, appartenenza al mese estesa a intervallo via `wasActiveInPeriod`
+- [x] Test: 5 sul trend con cessazione + 10 su `subscription-status` (35 test totali verdi)
+- [x] `deleteSubscription` → `cancelSubscription`; componente rinominato `cancel-subscription-button`, dialog riformulato → [[Interfaccia_Grafica_Dashboard]]
+- [ ] ⚠️ **UI di riattivazione**: `reactivateSubscription` esiste ma nessuna schermata la invoca — un abbonamento disattivato non è più raggiungibile → [[Interfaccia_Grafica_Dashboard]]
+- [x] ♻️ `revalidatePath` su disattivazione e riattivazione (Regola 3)
 - [ ] Decisione di prodotto: se servi anche una cancellazione definitiva per i record inseriti per errore
 
 ### 2️⃣ Email Ingestion & Payment Matcher 🟡 → [[Email_Ingestion_e_Matching]]

@@ -16,6 +16,7 @@ import {
   getSubscriptionsByUser,
   getSubscriptionByIdForUser,
 } from "@/lib/data/subscriptions";
+import { onlyActive } from "@/lib/subscription-status";
 import { toSubscriptionDTO, type SubscriptionDTO } from "@/types";
 
 export interface SubscriptionInput {
@@ -75,7 +76,8 @@ function revalidateSubscriptionViews() {
 export async function listSubscriptions(): Promise<SubscriptionDTO[]> {
   const userId = await getCurrentUserId();
   // Fetcher memoizzato (React.cache): condiviso con getMonthlyBurnRate → 1 SELECT.
-  const subscriptions = await getSubscriptionsByUser(userId);
+  // Soft-delete: la lista mostra ciò che l'utente paga adesso.
+  const subscriptions = onlyActive(await getSubscriptionsByUser(userId));
   return subscriptions.map(toSubscriptionDTO);
 }
 
@@ -141,8 +143,32 @@ export async function updateSubscription(
   return toSubscriptionDTO(subscription);
 }
 
-export async function deleteSubscription(id: string): Promise<void> {
+/**
+ * Soft-delete (Sprint 8): l'abbonamento viene **disattivato**, non cancellato.
+ *
+ * La cancellazione fisica portava via con sé i PaymentLog collegati (cascade) e
+ * riscriveva il passato nel grafico del trend. Qui si valorizza `canceledAt`, così
+ * lo storico resta intatto e la serie può finalmente scendere.
+ *
+ * `where: { id, userId }` garantisce che si tocchi solo un record proprio.
+ * La data è normalizzata a 00:00:00 UTC (Regola 2): entra in confronti di
+ * appartenenza al mese nel trend.
+ */
+export async function cancelSubscription(id: string): Promise<void> {
   const userId = await getCurrentUserId();
-  await prisma.subscription.delete({ where: { id, userId } });
+  await prisma.subscription.update({
+    where: { id, userId },
+    data: { canceledAt: toUtcMidnight(new Date()) },
+  });
+  revalidateSubscriptionViews(); // Regola 3
+}
+
+/** Riattiva un abbonamento disdetto: `canceledAt` torna a null. */
+export async function reactivateSubscription(id: string): Promise<void> {
+  const userId = await getCurrentUserId();
+  await prisma.subscription.update({
+    where: { id, userId },
+    data: { canceledAt: null },
+  });
   revalidateSubscriptionViews(); // Regola 3
 }

@@ -1,6 +1,8 @@
 # Soft-Delete Abbonamenti
 
-**Stato: progettato, non implementato.** Prossimo obiettivo prioritario.
+**Stato: implementato.** Il campo `canceledAt` esiste sul
+database dal 21 agosto 2026 (migrazione `add_canceled_at`) e la logica applicativa
+lo usa. Resta aperta solo la UI di riattivazione.
 
 Introduce una data di cessazione su `Subscription` al posto della cancellazione
 fisica, così disattivare un abbonamento smette di distruggere lo storico.
@@ -57,15 +59,25 @@ per una. Le letture vivono in `lib/data/`, quindi il cambiamento è concentrato 
 | Cron rinnovi | `canceledAt: null` | Non deve rinnovare né loggare pagamenti su un abbonamento chiuso |
 | Split-Billing | `canceledAt: null` | Non si invita su un abbonamento che non esiste più |
 
-La conseguenza pratica: `getSubscriptionsByUser` non può restare un solo fetcher
-indifferenziato. Serve separare la lettura degli **attivi** da quella che include
-i **cessati**, perché il trend è l'unico consumatore che vuole i secondi.
+### Decisione presa: fetcher unico
 
-⚠️ Attenzione alla memoizzazione: i fetcher sono avvolti in `React.cache` e
-deduplicano per argomenti. Due fetcher distinti significano due query per render
-sulla dashboard, dove oggi ce n'è una sola. Se il costo dà fastidio, l'alternativa
-è un unico fetcher senza filtro e la selezione degli attivi in memoria — a patto
-di documentarlo, perché sposta un filtro dal database al codice.
+`getSubscriptionsByUser` **resta un fetcher solo e senza filtro**: legge attivi e
+cessati, e la selezione degli attivi avviene **in memoria** nel consumatore.
+
+La motivazione è di scala. I fetcher sono avvolti in `React.cache` e deduplicano
+per argomenti: due fetcher distinti — uno filtrato, uno no — significherebbero due
+query per render sulla dashboard, dove oggi ce n'è una sola. Per un SaaS personale,
+dove il volume di abbonamenti per utente è irrisorio, una query in più pesa più
+del filtro risparmiato.
+
+⚠️ La contropartita va tenuta presente: **il filtro si sposta dal database al
+codice**. Ogni consumatore deve ricordarsi di applicarlo, e dimenticarsene non
+produce un errore ma un numero sbagliato — un abbonamento disdetto che continua a
+pesare sul Burn Rate. Conviene che il filtro viva in un unico punto riusabile,
+non ripetuto in ogni chiamante.
+
+Se un giorno il volume dovesse crescere, la strada alternativa è separare i due
+fetcher e riportare il filtro sul database, con un indice su `(userId, canceledAt)`.
 
 ---
 
@@ -90,13 +102,24 @@ toccare il database.
 
 ## Impatto sulla UI
 
-L'azione "Elimina" diventa **"Disattiva"**, con la possibilità di riattivare
-(`canceledAt` di nuovo a `null`). Il dialog di conferma cambia messaggio: non si
-sta più distruggendo un dato, si sta chiudendo un abbonamento.
+L'azione "Elimina" è diventata **"Disattiva"**: icona `PowerOff` al posto del
+cestino, e il dialog di conferma non parla più di rimozione definitiva ma spiega
+cosa succede davvero — l'abbonamento smette di contare nel Burn Rate e sparisce
+dalla lista, mentre lo storico resta e continua a comparire nel grafico.
+
+Il componente si chiama ora `cancel-subscription-button.tsx`: tenere il nome
+`delete` su un bottone che non cancella sarebbe stata una trappola per chi legge
+il codice fra sei mesi.
+
+⚠️ **Lacuna aperta.** La Server Action `reactivateSubscription` esiste, ma nessuna
+schermata la invoca: un abbonamento disattivato sparisce dalla lista e non c'è
+modo di riportarlo indietro dall'interfaccia. Serve una vista degli abbonamenti
+cessati, o un filtro sulla lista esistente. Vedi
+[[Interfaccia_Grafica_Dashboard]].
 
 Resta aperta una domanda di prodotto: se serva anche una cancellazione definitiva
 per l'utente che ha inserito un record per errore e non vuole vederlo nello
-storico. Dettagli UI in [[Interfaccia_Grafica_Dashboard]].
+storico.
 
 ---
 

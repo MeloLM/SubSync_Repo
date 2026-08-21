@@ -68,6 +68,7 @@ model Subscription {
   billingCycle    BillingCycle
   nextRenewalDate DateTime // Regola 2: forzata a 00:00:00 UTC pre-salvataggio
   createdAt       DateTime             @default(now())
+  canceledAt      DateTime? // Soft-delete: null = attivo. Regola 2: 00:00:00 UTC
   payments        PaymentLog[]
   members         SubscriptionMember[] // Split-Billing: partecipanti invitati
 

@@ -3,15 +3,19 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2, Trash2 } from "lucide-react";
+import { Loader2, PowerOff } from "lucide-react";
 
-import { deleteSubscription } from "@/actions/subscription.actions";
+import { cancelSubscription } from "@/actions/subscription.actions";
 
 /**
- * Bottone di eliminazione con dialog di conferma.
- * Conferma → `deleteSubscription` (Server Action) + toast + refresh.
+ * Bottone di disattivazione con dialog di conferma.
+ * Conferma → `cancelSubscription` (Server Action) + toast + refresh.
+ *
+ * Soft-delete (Sprint 8): l'abbonamento non viene distrutto, viene chiuso.
+ * Lo storico pagamenti resta, e il grafico del trend continua a mostrare i mesi
+ * in cui quella spesa c'era davvero.
  */
-export function DeleteSubscriptionButton({
+export function CancelSubscriptionButton({
   id,
   name,
 }: {
@@ -22,15 +26,15 @@ export function DeleteSubscriptionButton({
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  function handleDelete() {
+  function handleCancel() {
     startTransition(async () => {
       try {
-        await deleteSubscription(id);
-        toast.success("Abbonamento eliminato", { description: name });
+        await cancelSubscription(id);
+        toast.success("Abbonamento disattivato", { description: name });
         setOpen(false);
         router.refresh();
       } catch (err) {
-        toast.error("Eliminazione non riuscita", {
+        toast.error("Disattivazione non riuscita", {
           description: err instanceof Error ? err.message : "Errore.",
         });
       }
@@ -42,10 +46,10 @@ export function DeleteSubscriptionButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        aria-label={`Elimina ${name}`}
+        aria-label={`Disattiva ${name}`}
         className="grid h-8 w-8 place-items-center rounded-lg text-zinc-400 transition-colors hover:bg-red-500/10 hover:text-red-400"
       >
-        <Trash2 className="h-4 w-4" />
+        <PowerOff className="h-4 w-4" />
       </button>
 
       {open && (
@@ -60,11 +64,12 @@ export function DeleteSubscriptionButton({
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="mb-1 text-base font-semibold text-zinc-100">
-              Eliminare l&apos;abbonamento?
+              Disattivare l&apos;abbonamento?
             </h3>
             <p className="mb-6 text-sm text-zinc-400">
-              <span className="font-medium text-zinc-200">{name}</span> verrà
-              rimosso definitivamente, insieme allo storico pagamenti collegato.
+              <span className="font-medium text-zinc-200">{name}</span> smetterà di
+              contare nel Burn Rate e sparirà dalla lista. Lo storico pagamenti
+              resta intatto e continuerà a comparire nel grafico del trend.
             </p>
             <div className="flex justify-end gap-3">
               <button
@@ -77,12 +82,12 @@ export function DeleteSubscriptionButton({
               </button>
               <button
                 type="button"
-                onClick={handleDelete}
+                onClick={handleCancel}
                 disabled={isPending}
                 className="inline-flex items-center gap-2 rounded-lg bg-red-500/90 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-500 disabled:opacity-60"
               >
                 {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-                Elimina
+                Disattiva
               </button>
             </div>
           </div>

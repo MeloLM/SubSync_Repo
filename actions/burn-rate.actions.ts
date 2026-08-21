@@ -3,6 +3,7 @@
 import { ZERO } from "@/lib/money";
 import { getCurrentUserId } from "@/lib/auth";
 import { getSubscriptionsByUser } from "@/lib/data/subscriptions";
+import { onlyActive } from "@/lib/subscription-status";
 import type { BurnRateDTO } from "@/types";
 
 /**
@@ -19,7 +20,9 @@ import type { BurnRateDTO } from "@/types";
  */
 export async function getMonthlyBurnRate(): Promise<BurnRateDTO> {
   const userId = await getCurrentUserId();
-  const subscriptions = await getSubscriptionsByUser(userId);
+  // Soft-delete: il Burn Rate è il costo CORRENTE, un abbonamento disdetto non
+  // pesa più. Il fetcher legge anche i cessati, il filtro avviene qui.
+  const subscriptions = onlyActive(await getSubscriptionsByUser(userId));
 
   let total = ZERO;
   for (const sub of subscriptions) {

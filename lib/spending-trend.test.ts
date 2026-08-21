@@ -11,10 +11,12 @@ const sub = (
   amount: string,
   billingCycle: "MONTHLY" | "YEARLY",
   createdAt: string,
+  canceledAt: string | null = null,
 ): TrendSubscriptionInput => ({
   amount: money(amount),
   billingCycle,
   createdAt: new Date(createdAt),
+  canceledAt: canceledAt === null ? null : new Date(canceledAt),
 });
 
 // Riferimento fisso: 21 agosto 2026 → finestra mar..ago.
@@ -90,5 +92,62 @@ describe("computeNormalizedTrend", () => {
     const series = computeNormalizedTrend([], NOW, 6);
     expect(series[0].monthKey).toBe("2026-03");
     expect(series[5].monthKey).toBe("2026-08");
+  });
+});
+
+describe("computeNormalizedTrend — soft-delete (canceledAt)", () => {
+  it("conta un abbonamento cessato nei mesi in cui era attivo, e non dopo", () => {
+    // Attivo da gennaio, disdetto il 20 maggio: contribuisce fino a maggio.
+    const series = computeNormalizedTrend(
+      [sub("10.00", "MONTHLY", "2026-01-10", "2026-05-20")],
+      NOW,
+      6,
+    );
+    const totals = series.map((m) => m.total.toFixed(2));
+    //            mar      apr      mag      giu     lug     ago
+    expect(totals).toEqual(["10.00", "10.00", "10.00", "0.00", "0.00", "0.00"]);
+  });
+
+  it("fa scendere la serie: è il comportamento che il soft-delete deve garantire", () => {
+    const series = computeNormalizedTrend(
+      [
+        sub("10.00", "MONTHLY", "2026-01-01"),
+        sub("5.00", "MONTHLY", "2026-01-01", "2026-06-15"),
+      ],
+      NOW,
+      6,
+    );
+    const totals = series.map((m) => m.total.toFixed(2));
+    expect(totals).toEqual(["15.00", "15.00", "15.00", "15.00", "10.00", "10.00"]);
+  });
+
+  it("include il mese della cessazione: quel ciclo era già stato pagato", () => {
+    const series = computeNormalizedTrend(
+      [sub("10.00", "MONTHLY", "2026-01-01", "2026-07-01T00:00:00.000Z")],
+      NOW,
+      6,
+    );
+    expect(series[4].total.toFixed(2)).toBe("10.00"); // luglio, mese della disdetta
+    expect(series[5].total.toFixed(2)).toBe("0.00"); // agosto
+  });
+
+  it("esclude del tutto un abbonamento cessato prima della finestra", () => {
+    const series = computeNormalizedTrend(
+      [sub("10.00", "MONTHLY", "2025-01-01", "2026-01-15")],
+      NOW,
+      6,
+    );
+    expect(series.every((m) => m.total.toFixed(2) === "0.00")).toBe(true);
+  });
+
+  it("ignora una cessazione futura rispetto alla creazione nello stesso mese", () => {
+    // Creato e disdetto a giugno: contribuisce solo a giugno.
+    const series = computeNormalizedTrend(
+      [sub("10.00", "MONTHLY", "2026-06-05", "2026-06-25")],
+      NOW,
+      6,
+    );
+    const totals = series.map((m) => m.total.toFixed(2));
+    expect(totals).toEqual(["0.00", "0.00", "0.00", "10.00", "0.00", "0.00"]);
   });
 });
