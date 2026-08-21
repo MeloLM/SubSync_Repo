@@ -50,10 +50,10 @@ export interface BurnRateDTO {
   subscriptionCount: number;
 }
 
-/** Un mese della serie "Trend di spesa" (aggregato dai PaymentLog, Regola 4). */
+/** Un mese della serie "Trend di spesa" (costo normalizzato, Regola 4). */
 export interface SpendingTrendPoint {
   monthKey: string; // "YYYY-MM" (UTC) — chiave stabile / React key
-  monthLabel: string; // etichetta breve asse-x, es. "lug" (it-IT, UTC)
+  name: string; // etichetta breve asse-x, es. "lug" (it-IT, UTC) — dataKey Recharts
   fullLabel: string; // etichetta estesa tooltip/aria, es. "luglio 2026" (it-IT, UTC)
   total: string; // totale del mese, Prisma.Decimal → stringa a 2 decimali (Regola 1)
 }
@@ -61,7 +61,7 @@ export interface SpendingTrendPoint {
 export interface SpendingTrendDTO {
   currency: string;
   windowMonths: number;
-  total: string; // Σ della finestra, Prisma.Decimal → stringa
+  total: string; // costo normalizzato cumulato della finestra, Decimal → stringa
   points: SpendingTrendPoint[];
 }
 

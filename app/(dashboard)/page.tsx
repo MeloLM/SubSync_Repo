@@ -3,7 +3,7 @@ import { Flame, CalendarClock, TrendingUp } from "lucide-react";
 import { listSubscriptions } from "@/actions/subscription.actions";
 import { getMonthlyBurnRate } from "@/actions/burn-rate.actions";
 import { getSpendingTrend } from "@/actions/spending-trend.actions";
-import { SpendingTrendChart } from "@/components/dashboard/spending-trend-chart";
+import { SpendingChartLoader } from "@/components/dashboard/spending-chart-loader";
 import { formatMoney } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
@@ -88,9 +88,9 @@ export default async function DashboardPage() {
         {/* Card 3 — Trend (full width) */}
         <section className="col-span-full rounded-2xl border border-zinc-800 bg-subsync-card p-6 shadow-sm">
           <div className="mb-4 flex items-center gap-2 text-sm text-zinc-400">
-            <TrendingUp className="h-4 w-4" /> Trend di spesa
+            <TrendingUp className="h-4 w-4" /> Trend di spesa — costo mensile normalizzato
           </div>
-          <SpendingTrendChart data={spendingTrend} />
+          <SpendingChartLoader data={spendingTrend} />
         </section>
       </div>
     </div>

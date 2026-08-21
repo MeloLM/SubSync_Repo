@@ -1,9 +1,9 @@
 "use server";
 
-import { ZERO, type Money } from "@/lib/money";
+import { ZERO } from "@/lib/money";
 import { getCurrentUserId } from "@/lib/auth";
-import { getPaymentsByUser } from "@/lib/data/payments";
 import { getSubscriptionsByUser } from "@/lib/data/subscriptions";
+import { computeNormalizedTrend } from "@/lib/spending-trend";
 import type { SpendingTrendDTO, SpendingTrendPoint } from "@/types";
 
 /**
@@ -13,78 +13,36 @@ import type { SpendingTrendDTO, SpendingTrendPoint } from "@/types";
  */
 const WINDOW_MONTHS = 6;
 
-/** Chiave mese "YYYY-MM" dai componenti UTC di una data (Regola 2). */
-function monthKeyUTC(date: Date): string {
-  const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-  return `${year}-${month}`;
-}
-
-/** Etichetta mese it-IT ancorata a UTC, a partire da una monthKey "YYYY-MM". */
-function formatMonthUTC(
-  monthKey: string,
-  options: Intl.DateTimeFormatOptions,
-): string {
-  const [year, month] = monthKey.split("-").map(Number);
-  const date = new Date(Date.UTC(year, month - 1, 1));
-  return new Intl.DateTimeFormat("it-IT", {
-    ...options,
-    timeZone: "UTC",
-  }).format(date);
-}
-
 /**
- * Regola 4 (ARCHITECTURE.md): aggregazione confinata sul server.
+ * Regola 4: aggregazione confinata sul server.
  *
- * Somma la spesa reale (PaymentLog) degli ultimi `WINDOW_MONTHS` mesi, un bucket
- * per mese, dal più vecchio al più recente. I mesi senza pagamenti restano nella
- * serie con totale zero (barre vuote), così l'asse resta continuo.
+ * Serie del **costo mensile normalizzato** degli ultimi WINDOW_MONTHS mesi:
+ * gli abbonamenti annuali entrano divisi per 12, esattamente come nel Monthly
+ * Burn Rate. Il valore dell'ultimo mese della serie coincide quindi col KPI
+ * mostrato nella card in cima alla dashboard.
  *
- * Legge dai fetcher memoizzati (React.cache): sulla dashboard la SELECT su
- * Subscription è già eseguita da Burn Rate + lista, quindi qui si deduplica la
- * query e la valuta resta coerente col Burn Rate.
+ * Legge dal fetcher memoizzato (React.cache), lo stesso di `listSubscriptions` e
+ * `getMonthlyBurnRate`: sulla dashboard Prisma esegue UNA sola SELECT su
+ * Subscription per le tre metriche.
  *
- * Tutte le somme sono in Prisma.Decimal (Regola 1); il DTO espone stringhe a 2
- * decimali: nessun float attraversa il confine server → client.
+ * L'aritmetica sta tutta in `lib/spending-trend.ts` (helper puro, testato) e
+ * resta in Prisma.Decimal fino al confine DTO, dove diventa stringa a 2 decimali:
+ * nessun float attraversa il passaggio server → client (Regola 1).
  */
 export async function getSpendingTrend(): Promise<SpendingTrendDTO> {
   const userId = await getCurrentUserId();
-  const [payments, subscriptions] = await Promise.all([
-    getPaymentsByUser(userId),
-    getSubscriptionsByUser(userId),
-  ]);
+  const subscriptions = await getSubscriptionsByUser(userId);
 
-  // Bucket a ZERO dal più vecchio (WINDOW_MONTHS-1 mesi fa) al mese corrente.
-  const now = new Date();
-  const buckets = new Map<string, Money>();
-  const orderedKeys: string[] = [];
-  for (let i = WINDOW_MONTHS - 1; i >= 0; i--) {
-    const monthStart = new Date(
-      Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1),
-    );
-    const key = monthKeyUTC(monthStart);
-    buckets.set(key, ZERO);
-    orderedKeys.push(key);
-  }
+  const months = computeNormalizedTrend(subscriptions, new Date(), WINDOW_MONTHS);
 
-  // Aggrega ogni pagamento nel bucket del suo mese UTC (Regola 1: Decimal).
-  // I pagamenti fuori finestra non hanno bucket → ignorati.
-  for (const payment of payments) {
-    const key = monthKeyUTC(payment.paidAt);
-    const current = buckets.get(key);
-    if (current) buckets.set(key, current.add(payment.amount));
-  }
-
-  // Punti della serie + totale della finestra, sempre in Decimal.
   let windowTotal = ZERO;
-  const points: SpendingTrendPoint[] = orderedKeys.map((key) => {
-    const total = buckets.get(key) ?? ZERO;
-    windowTotal = windowTotal.add(total);
+  const points: SpendingTrendPoint[] = months.map((month) => {
+    windowTotal = windowTotal.add(month.total);
     return {
-      monthKey: key,
-      monthLabel: formatMonthUTC(key, { month: "short" }),
-      fullLabel: formatMonthUTC(key, { month: "long", year: "numeric" }),
-      total: total.toFixed(2), // Decimal → stringa solo al confine DTO
+      monthKey: month.monthKey,
+      name: month.name,
+      fullLabel: month.fullLabel,
+      total: month.total.toFixed(2), // Decimal → stringa solo al confine DTO
     };
   });
 
