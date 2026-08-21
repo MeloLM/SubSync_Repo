@@ -1,8 +1,11 @@
 # ARCHITECTURE — SubSync
 
-Questo documento definisce la struttura del progetto e le **regole architetturali
-vincolanti**. Non sono opzionali: sono i pilastri su cui si fonda la correttezza
-dell'applicazione (accuratezza monetaria, gestione date, coerenza della cache).
+Questo documento descrive la **struttura tecnica** del progetto: organizzazione
+delle cartelle, mappa della documentazione e schema relazionale.
+
+Non contiene regole. Le regole operative, le direttive di comportamento e le
+convenzioni di nomenclatura vivono in un unico documento normativo:
+**`AI_law_subsync.md`** nella root del progetto.
 
 ---
 
@@ -94,75 +97,27 @@ subsync/
 
 ---
 
-## Regole architetturali
+## Mappa Obsidian (macro-aree)
 
-### Regola 1 — Calcoli monetari sempre con Decimal
-È **obbligatorio** usare `Decimal.js` oppure `Prisma.Decimal` per **qualsiasi**
-importo o calcolo monetario.
-- **VIETATO** `number`/`float`: introduce errori di arrotondamento in virgola
-  mobile (es. `0.1 + 0.2 !== 0.3`), inaccettabili in ambito finanziario.
-- I campi monetari nello schema Prisma sono di tipo `Decimal`.
-- Somme, divisioni (`annuale / 12`) e aggregazioni operano su istanze `Decimal`.
+La documentazione di dettaglio vive in `docs/`, organizzata per **area logica** e non
+per file di codice. Il nodo centrale è [[Index]], che raccoglie tutte le aree e i
+lavori ancora da fare.
 
-### Regola 2 — Date di rinnovo normalizzate a 00:00:00 UTC
-Tutte le `nextRenewalDate` **devono** essere forzate a `00:00:00 UTC` **prima del
-salvataggio**.
-- Evita i bug di fuso orario (off-by-one day) tra client e server.
-- Normalizzazione centralizzata in `lib/date.ts`, applicata in ogni Server Action
-  di mutazione prima della scrittura sul DB.
+### Fondamenta
+[[Motore_Regole_NextJS]] · [[Auth_Utenti_e_Sessioni_Supabase]] · [[Database_Tabelle_e_Modelli_Prisma]]
 
-### Regola 3 — `revalidatePath` su ogni mutazione
-Ogni Server Action che **muta** lo stato del DB (create / update / delete)
-**DEVE** chiamare `revalidatePath` sul/sui path interessati.
-- Garantisce che la cache di Next.js sia invalidata e le viste riflettano lo stato
-  reale del database subito dopo la scrittura.
+### Domini applicativi
+[[Gestione_Pagamenti_e_Rinnovi]] · [[Condivisione_Spese_e_Gruppi]] · [[Calcolo_IVA_e_Fisco]] · [[Lettura_Scontrini_OCR_Gemini]]
 
-### Regola 4 — Aggregazione del Monthly Burn Rate isolata sul server
-La logica di calcolo e aggregazione del **Monthly Burn Rate** è confinata
-**esclusivamente** lato server (in `actions/burn-rate.actions.ts`).
-- Definizione:
+### Interfaccia e distribuzione
+[[Interfaccia_Grafica_Dashboard]] · [[App_Mobile_e_Offline_PWA]]
 
-  ```
-  Monthly Burn Rate = Σ(costo abbonamenti mensili) + Σ(costo abbonamenti annuali) / 12
-  ```
+### Nodi fantasma
+Feature pianificate e non ancora esistenti, che nel grafo appaiono come cerchi vuoti.
+L'elenco completo con il contesto è in [[Index]]; il dettaglio operativo in [[TODO]].
 
-- Il client **non** ricalcola né duplica la logica: riceve il valore già aggregato.
-  Singola fonte di verità per i KPI, nessuna divergenza tra le viste.
-
-### Regola 5 — Architettura UI Modulare e Mobile-First
-Ogni vista complessa deve essere frammentata in micro-componenti (es. separando
-i form, le card e la logica di layout in file distinti dentro `components/`). È
-severamente vietato creare file di pagina monolitici. Il design deve essere
-sviluppato in ottica Mobile-First utilizzando i breakpoint di Tailwind CSS.
-Questo approccio previene il sovraccarico cognitivo (sia umano che dell'IA)
-durante le modifiche UI.
-
-### Regola 6 — Responsive Design e Breakpoint Vincolanti
-I breakpoint standard di Tailwind sono **legge assoluta** per il layout. Sono
-vietate deroghe che facciano affiancare la sidebar sotto la soglia desktop.
-
-- **Mobile (default, `< 768px`)** — layout a **singola colonna, 100% width**.
-  **Nessuna sidebar affiancata consentita**: la navigazione vive in un **Header
-  superiore** (menu a tendina).
-- **Tablet (`md:` 768px – 1024px)** — layout di transizione.
-- **Desktop (`lg:` ≥ 1024px)** — layout a **due colonne**: Sidebar laterale
-  fissa + Contenuto.
-
-Conseguenza operativa: la sidebar laterale esiste **solo** da `lg:` in su
-(`hidden lg:flex`); sotto `lg` la navigazione è esclusivamente nell'header mobile.
-
-### Regola 7 — Changelog Obbligatorio
-Al termine di **ogni** esecuzione/task, **prima di chiedere l'ok per il commit**,
-è **tassativo** aggiornare il diario di bordo in `.agent-logs/`
-(`sprint-N-changelog.md`) con un blocco datato che riepiloghi in dettaglio:
-- i file **creati/modificati** e la motivazione;
-- l'esito della **verifica** (`tsc --noEmit` / `next build`);
-- eventuali **note di configurazione** (es. step manuali su Supabase/Vercel).
-
-Il changelog è di **sola documentazione** (non entra nel bundle Next.js) e
-costituisce la traccia cronologica per sessione. **Nessun commit** va richiesto
-senza aver prima aggiornato questa traccia. Nuovo sprint → nuovo file
-`sprint-N-changelog.md` nella stessa cartella.
+Le regole di manutenzione della documentazione (macro-aree, divieto di note per
+singolo componente, ciclo di vita dei nodi fantasma) sono in `AI_law_subsync.md`.
 
 ---
 
@@ -204,9 +159,3 @@ User (1) ──────< (N) Subscription (1) ──────< (N) Paymen
 | `amount`         | **Decimal** | Importo pagato (Regola 1)     |
 | `paidAt`         | DateTime    | Data pagamento (UTC)          |
 
----
-
-## Direttive Operative per l'Agente
-
-- **[REGOLA DI VALIDAZIONE]**: Al termine di ogni modifica, non avviare 'pnpm dev'. Esegui obbligatoriamente 'pnpm build'. Se la build fallisce (max 2 tentativi), ferma tutto e scrivi l'errore nel TODO.md sotto "Errors to fix".
-- **[LOG DI CONFERMA]**: Alla fine di ogni intervento, genera un report testuale con: esito validazione, file modificati, e prossima task logica in coda.

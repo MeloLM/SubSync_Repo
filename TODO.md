@@ -85,12 +85,12 @@
 ### Offline & Service Worker
 - [x] **Service Worker** (`public/sw.js`) — cache-first su asset statici (`/_next/static` + icone)
 - [x] **Offline fallback** — `public/offline.html` + navigations network-first con fallback
-- [ ] Strategia di cache per le viste read-only del Burn Rate _(viste autenticate/dinamiche: da progettare)_
+- [ ] Strategia di cache per le viste read-only del Burn Rate _(viste autenticate/dinamiche: da progettare)_ → [[Burn Rate Offline Cache]]
 
 ### Meta & UX mobile
 - [x] Meta tag **iOS/Android** (`apple-mobile-web-app-*`, `theme-color`, `viewport-fit=cover`)
 - [x] Componente **Install Prompt** (A2HS) — banner dedicato su `beforeinstallprompt`
-- [ ] Lighthouse PWA ≥ 90 _(da eseguire manualmente su build prod; audit responsive → SPRINT 7)_
+- [ ] Lighthouse PWA ≥ 90 _(da eseguire manualmente su build prod; audit responsive → SPRINT 7)_ → [[Lighthouse Audit]]
 
 ---
 
@@ -99,10 +99,10 @@
 > 🟡 Automazioni che eliminano l'inserimento manuale e tengono i dati sempre freschi.
 
 ### 📥 Email Ingestion
-- [ ] Endpoint **webhook** ricezione email (provider inbound, es. mailbox dedicata)
-- [ ] Parser fatture/ricevute → estrazione `name` / `amount` / `paidAt`
-- [ ] ⚠️ Persistenza `PaymentLog` con `amount` Decimal e `paidAt` in UTC
-- [ ] Matching automatico ricevuta → `Subscription` esistente
+- [ ] Endpoint **webhook** ricezione email (provider inbound, es. mailbox dedicata) → [[Email Webhook]]
+- [ ] Parser fatture/ricevute → estrazione `name` / `amount` / `paidAt` → [[Receipt Parser]]
+- [ ] ⚠️ Persistenza `PaymentLog` con `amount` Decimal e `paidAt` in UTC → [[Database_Tabelle_e_Modelli_Prisma]]
+- [ ] Matching automatico ricevuta → `Subscription` esistente → [[Payment Matcher]]
 
 ### ⏰ Cron Job rinnovi
 - [x] Endpoint locale di test `/api/cron/renewals` (route handler) — testato (401/200)
@@ -132,9 +132,9 @@
 - _Nota: il Monthly Burn Rate resta sul costo degli abbonamenti posseduti (Regola 4 invariata in questo pass)._
 
 ### Fiscalità & Ottimizzazione
-- [ ] Modulo **deducibilità fiscale** per freelance / Partita IVA
-- [ ] **Suggeritore switch** mensile → annuale quando conviene (calcolo risparmio in Decimal) — _design scelto: campo `altCyclePrice` opzionale sulla Subscription_
-- [ ] Normalizzazione multi-valuta per aggregazioni cross-currency — _design scelto: API di cambio live + caching_
+- [ ] Modulo **deducibilità fiscale** per freelance / Partita IVA → [[Calcolo_IVA_e_Fisco]] (calcolo pronto) + [[Fiscal Breakdown View]] + [[Expense Category Actions]]
+- [ ] **Suggeritore switch** mensile → annuale quando conviene (calcolo risparmio in Decimal) — _design scelto: campo `altCyclePrice` opzionale sulla Subscription_ → [[Switch Suggester]]
+- [ ] Normalizzazione multi-valuta per aggregazioni cross-currency — _design scelto: API di cambio live + caching_ → [[Currency Normalizer]]
 
 ---
 
@@ -159,10 +159,10 @@
 
 > 🔴 Urgenza massima. Ristrutturazione dell'interfaccia per garantire una fruizione perfetta su smartphone e frammentazione dei componenti per alleggerire il carico sui file sorgente. Vincolo di riferimento: **Regola 5** (`ARCHITECTURE.md`).
 
-- [ ] **Refactoring modulare**: Isolare le sezioni complesse di `/subscriptions` e della Dashboard in micro-componenti UI dedicati.
-- [ ] **Implementazione Mobile-First**: Ristrutturare layout, griglie e flussi utilizzando i breakpoint Tailwind (`sm:`, `md:`, `lg:`).
-- [ ] **Ottimizzazione Navigazione**: Adattare la sidebar/header per dispositivi touch (es. menu a comparsa o bottom navigation).
-- [ ] **Audit Visivo**: Risolvere eventuali overflow orizzontali e ottimizzare i padding su viewport mobili.
+- [ ] **Refactoring modulare**: Isolare le sezioni complesse di `/subscriptions` e della Dashboard in micro-componenti UI dedicati. → [[Interfaccia_Grafica_Dashboard]]
+- [ ] **Implementazione Mobile-First**: Ristrutturare layout, griglie e flussi utilizzando i breakpoint Tailwind (`sm:`, `md:`, `lg:`). → [[Interfaccia_Grafica_Dashboard]], [[Motore_Regole_NextJS]]
+- [ ] **Ottimizzazione Navigazione**: Adattare la sidebar/header per dispositivi touch (es. menu a comparsa o bottom navigation). → [[Interfaccia_Grafica_Dashboard]]
+- [ ] **Audit Visivo**: Risolvere eventuali overflow orizzontali e ottimizzare i padding su viewport mobili. → [[Interfaccia_Grafica_Dashboard]]
 
 ---
 
@@ -178,6 +178,7 @@
 | ⚠️       | Vincolo architetturale tassativo (vedi `ARCHITECTURE.md`)     |
 | ♻️       | Invalidazione cache richiesta (`revalidatePath`)              |
 | 🔐       | Task con implicazioni di sicurezza                            |
+| `[[X]]`  | Nodo del grafo Obsidian — le macro-aree sono indicizzate in `docs/Index.md`; se la nota non esiste è un **ghost**, cioè lavoro ancora da fare |
 
 ---
 

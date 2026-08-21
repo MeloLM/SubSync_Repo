@@ -29,3 +29,6 @@ yarn-debug.log*
 # typescript (artefatti generati: rigenerati da Next.js/tsc al build)
 *.tsbuildinfo
 next-env.d.ts
+
+# obsidian (configurazione visiva del vault: locale per ogni sviluppatore)
+/.obsidian/
