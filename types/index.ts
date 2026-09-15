@@ -51,19 +51,46 @@ export interface BurnRateDTO {
   subscriptionCount: number;
 }
 
-/** Un mese della serie "Trend di spesa" (costo normalizzato, Regola 4). */
-export interface SpendingTrendPoint {
-  monthKey: string; // "YYYY-MM" (UTC) — chiave stabile / React key
-  name: string; // etichetta breve asse-x, es. "lug" (it-IT, UTC) — dataKey Recharts
-  fullLabel: string; // etichetta estesa tooltip/aria, es. "luglio 2026" (it-IT, UTC)
-  total: string; // totale del mese, Prisma.Decimal → stringa a 2 decimali (Regola 1)
+/**
+ * Un punto del grafico di dashboard: un **mese** ("YYYY-MM") nelle viste a 6
+ * mesi e 1 anno, un **giorno** ("YYYY-MM-DD") nella vista a 30 giorni.
+ */
+export interface ChartPointDTO {
+  key: string; // chiave stabile / React key (UTC)
+  name: string; // etichetta breve asse-x, es. "lug" o "25 ago" (it-IT, UTC)
+  fullLabel: string; // etichetta estesa tooltip/aria (it-IT, UTC)
+  total: string; // totale, Prisma.Decimal → stringa a 2 decimali (Regola 1)
+  isFuture: boolean; // periodo non ancora iniziato: la UI lo disegna proiettato
 }
 
-export interface SpendingTrendDTO {
+export interface ChartSeriesDTO {
+  points: ChartPointDTO[];
+  total: string; // totale cumulato della serie, Decimal → stringa
+}
+
+/**
+ * Tutte le serie del grafico di dashboard, **già aggregate sul server**
+ * (Regola 4). Il client sceglie quale disegnare in base ai due selettori
+ * (metrica × finestra): scegliere una serie precalcolata non è ricalcolarla, e
+ * cambiare vista non costa un round-trip.
+ *
+ * Il sovrapprezzo è nullo: tutte le serie nascono dalla stessa SELECT memoizzata
+ * su `Subscription`, e l'intero payload sta in poche decine di punti.
+ *
+ * - `accrual*` — **competenza**: costo normalizzato (annuale/12), la metrica del
+ *   Monthly Burn Rate. Nel futuro è una linea piatta al Burn Rate corrente.
+ * - `cash*` — **cassa**: importi pieni nel mese in cui escono davvero. Passato
+ *   dai `PaymentLog` reali, futuro dalla proiezione dei rinnovi.
+ * - `cash30d` — prossimi 30 giorni a granularità giornaliera, solo cassa: un
+ *   mese su bucket mensili sarebbe una barra sola.
+ */
+export interface DashboardChartsDTO {
   currency: string;
-  windowMonths: number;
-  total: string; // costo normalizzato cumulato della finestra, Decimal → stringa
-  points: SpendingTrendPoint[];
+  accrual6m: ChartSeriesDTO;
+  accrual1y: ChartSeriesDTO;
+  cash6m: ChartSeriesDTO;
+  cash1y: ChartSeriesDTO;
+  cash30d: ChartSeriesDTO;
 }
 
 /** Mapper Prisma → DTO. Usare nelle Server Actions prima di passare le props. */

@@ -2,7 +2,7 @@
 
 | Metadato         | Valore |
 | ---------------- | ------ |
-| **Last Updated** | 2026-08-21 |
+| **Last Updated** | 2026-09-15 |
 | **Sprint attivo** | 🔴 **SPRINT 8 — Integrità dello Storico & Aggiornamento Automatico** |
 | **Status**       | App **LIVE e stabile su Vercel**. Sprint 1, 2, 6 e 7 completati. Sprint 3, 4 e 5 chiusi sul consegnato, con i residui spostati nel **Backlog consolidato** in fondo. Il focus passa dall'interfaccia ai dati: prima la cessazione logica degli abbonamenti (senza cui lo storico del trend è inattendibile), poi l'ingestione email che tiene prezzi e rinnovi aggiornati da soli. |
 | **Goal**         | Tracciare gli abbonamenti e calcolare il **Monthly Burn Rate** normalizzato, con importi monetari accurati (Decimal) e date timezone-safe (00:00:00 UTC). |
@@ -19,9 +19,11 @@
 
 ## 🔴 SPRINT 8 — Integrità dello Storico & Aggiornamento Automatico `[ATTIVO]`
 
-> 🔴 Due obiettivi in sequenza, non in parallelo. Il primo è una precondizione
-> del secondo: il matching delle ricevute deve poter distinguere un abbonamento
-> attivo da uno cessato, e oggi i cessati semplicemente non esistono più.
+> 🔴 Obiettivi in sequenza, non in parallelo. Il soft-delete è una precondizione
+> dell'ingestione email: il matching delle ricevute deve poter distinguere un
+> abbonamento attivo da uno cessato. Il grafico dinamico si è inserito fra i due
+> perché ha fatto emergere un bug di fatturazione sulle date di rinnovo, che
+> l'ingestione avrebbe ereditato.
 
 ### 1️⃣ Soft-Delete abbonamenti 🔴 → [[Soft_Delete_Abbonamenti]]
 
@@ -41,7 +43,27 @@ riscritto._
 - [x] ♻️ `revalidatePath` su disattivazione e riattivazione (Regola 3)
 - [ ] Decisione di prodotto: se servi anche una cancellazione definitiva per i record inseriti per errore
 
-### 2️⃣ Email Ingestion & Payment Matcher 🟡 → [[Email_Ingestion_e_Matching]]
+### 2️⃣ Grafico dinamico e proiezione di cassa 🔴 → [[Gestione_Pagamenti_e_Rinnovi]]
+
+_Il grafico normalizzato risponde a "quanto mi costa in media al mese", non a "in
+quali mesi spenderò di più": la normalizzazione nasconde proprio i picchi che
+servono a pianificare. Da qui la seconda metrica, e il bug di fatturazione che
+progettarla ha fatto emergere._
+
+- [x] ⚠️ **Fix clamping date**: `advanceRenewalDate` faceva traboccare il giorno nel mese successivo — il 31 gennaio finiva al 3 marzo e **febbraio spariva**. Ora satura all'ultimo giorno del mese (Regola 2 invariata) → [[Database_Tabelle_e_Modelli_Prisma]]
+- [x] Scheletro temporale condiviso `buildMonthBuckets` in `lib/date.ts`: finestre passate, future o a cavallo del presente, usate da entrambe le metriche
+- [x] ⚠️ `lib/cash-flow.ts` — enumerazione dei rinnovi, proiezione a importi **pieni**, storico dai `PaymentLog` reali, vista giornaliera a 30 giorni (tutto in `Decimal`)
+- [x] Proiezione iterata sulla **stessa** funzione del cron: il grafico non può promettere una data che il cron non rispetterà
+- [x] Confine consolidato/proiettato alla mezzanotte di domani: nessun doppio conteggio col `PaymentLog` del giorno
+- [x] Test: 36 nuovi, incluso l'**invariante Σ cassa === Σ competenza === Burn Rate × 12** (71 totali verdi)
+- [x] Fetcher `getPaymentsByUserInRange`: il taglio della finestra lo fa il database → [[Database_Tabelle_e_Modelli_Prisma]]
+- [x] Tutte le serie precalcolate in una sola lettura (Regola 4): cambiare vista non è un round-trip
+- [x] UI: due selettori segmentati indipendenti, mobile-first, estratti in un componente proprio (Regola 5) → [[Interfaccia_Grafica_Dashboard]]
+- [x] BarChart con opacità differenziata e `ReferenceLine` "oggi"; nessun `ComposedChart`
+- [ ] ⚠️ **Deriva residua di ancoraggio**: dopo un passaggio da un mese corto il 31 diventa 28 e non torna indietro. Serve un campo `anchorDay` sullo schema → [[Database_Tabelle_e_Modelli_Prisma]]
+- [ ] Collaudo visivo su viewport stretto delle 12 barre della finestra annuale
+
+### 3️⃣ Email Ingestion & Payment Matcher 🟡 → [[Email_Ingestion_e_Matching]]
 
 _La killer feature: le ricevute arrivano già per email a ogni rinnovo.
 Intercettarle rende il Burn Rate un dato vivo invece di una fotografia del

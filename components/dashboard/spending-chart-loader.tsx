@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import type { SpendingTrendDTO } from "@/types";
+import type { DashboardChartsDTO } from "@/types";
 
 /**
  * Confine di code-splitting del grafico.
@@ -16,8 +16,8 @@ import type { SpendingTrendDTO } from "@/types";
  * in Next 14 `ssr: false` non è consentito lì. Serve un confine client esplicito,
  * e questo wrapper è l'unica cosa che ci sta dentro.
  *
- * Il placeholder replica l'altezza esatta del grafico (`h-48 sm:h-56` più il
- * footer) così la sostituzione non produce layout shift.
+ * Il placeholder replica l'altezza esatta del grafico (selettori, `h-48 sm:h-56`
+ * e footer) così la sostituzione non produce layout shift.
  */
 const SpendingChart = dynamic(
   () =>
@@ -26,6 +26,10 @@ const SpendingChart = dynamic(
     ssr: false,
     loading: () => (
       <div>
+        <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
+          <Skeleton className="h-11 w-full sm:w-44" />
+          <Skeleton className="h-11 w-full sm:w-32" />
+        </div>
         <Skeleton className="h-48 w-full sm:h-56" />
         <div className="mt-4 flex items-baseline justify-between">
           <Skeleton className="h-3 w-56" />
@@ -36,6 +40,6 @@ const SpendingChart = dynamic(
   },
 );
 
-export function SpendingChartLoader({ data }: { data: SpendingTrendDTO }) {
+export function SpendingChartLoader({ data }: { data: DashboardChartsDTO }) {
   return <SpendingChart data={data} />;
 }

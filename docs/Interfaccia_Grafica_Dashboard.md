@@ -61,10 +61,38 @@ Riceve dati già aggregati da [[Gestione_Pagamenti_e_Rinnovi]] e non esegue alcu
 calcolo monetario: la conversione a `number` è confinata alla geometria SVG e ai
 formatter.
 
-Barre e non area: i punti sono totali mensili discreti, e un'area interpolerebbe
-visivamente valori inesistenti fra un mese e l'altro. I colori sono valori
-esadecimali e non classi Tailwind, perché Recharts disegna SVG: vanno tenuti
-allineati a mano con `tailwind.config.ts`.
+Barre e non area: i punti sono totali discreti, e un'area interpolerebbe
+visivamente valori inesistenti fra un punto e l'altro. Sul flusso di cassa
+l'argomento è più forte, non più debole: fra un picco e l'altro il valore reale è
+**zero**, e una rampa continua verso i 120 € di novembre suggerirebbe una spesa
+progressiva che non avviene. I colori sono valori esadecimali e non classi
+Tailwind, perché Recharts disegna SVG: vanno tenuti allineati a mano con
+`tailwind.config.ts`.
+
+#### Selettori e stato della vista
+Due selettori segmentati indipendenti — **metrica** (competenza / cassa) e
+**finestra** (30 giorni / 6 mesi / 1 anno) — vivono in un componente generico a
+parte, per non trasformare il grafico nel file monolitico che la Regola 5 vieta.
+Mobile-first: a tutta larghezza con i segmenti che si dividono lo spazio sotto
+`sm:`, compatti e allineati a destra da lì in su.
+
+Il server precalcola **tutte** le combinazioni, quindi cambiare vista è un
+`useState` e non un round-trip: scegliere fra serie già aggregate non viola la
+regola sulle aggregazioni server-side, ricalcolarle lo farebbe.
+
+La vista a 30 giorni esiste solo per la cassa — una spesa normalizzata al giorno
+non significa nulla — e in quel caso l'opzione "competenza" è disabilitata con una
+spiegazione, non nascosta. La metrica scelta non viene sovrascritta ma derivata,
+così tornando su una finestra mensile si ritrova la selezione precedente.
+
+#### Consolidato e proiettato
+Nella finestra annuale la serie attraversa il presente. Il passato consolidato si
+distingue dal futuro proiettato con l'opacità delle barre più una linea
+tratteggiata di riferimento etichettata "oggi"; il tooltip lo ripete a parole.
+
+La distinzione si disegna **solo** se la serie contiene entrambe le parti:
+attenuare tutte le barre, come accadrebbe nella vista a 30 giorni dove è tutto
+futuro, non comunicherebbe niente.
 
 La libreria non entra nel bundle iniziale. Il grafico è caricato con
 `next/dynamic` e `ssr: false` da un wrapper client dedicato, che esiste solo
