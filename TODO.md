@@ -86,16 +86,23 @@ _La killer feature: le ricevute arrivano già per email a ogni rinnovo.
 Intercettarle rende il Burn Rate un dato vivo invece di una fotografia del
 giorno dell'inserimento._
 
-- [ ] Decisioni di modello da chiudere **prima** del codice: identificativo del messaggio processato (idempotenza) e forma della proposta in attesa di conferma → [[Database_Tabelle_e_Modelli_Prisma]]
+- [x] ⚠️ **Decisioni di modello chiuse** — i tre nodi risolti in [[Email_Ingestion_e_Matching]], con schema Prisma progettato ma **non applicato**:
+  - **Identità**: indirizzo di ricezione univoco per utente (token casuale da 128 bit, ruotabile), non matching sul mittente — che si rompe sull'inoltro automatico ed è falsificabile
+  - **Idempotenza**: `Message-ID` normalizzato, con hash del contenuto come ripiego; vincolo `@@unique([userId, dedupeKey])` sul **database**, non un controllo applicativo
+  - **Stato di attesa**: entità `PaymentProposal` separata, **nessuno `status` su `PaymentLog`** — sarebbe lo stesso errore del filtro dimenticato che il soft-delete ha insegnato a evitare
+- [x] **Ambito ristretto alle sole email transazionali** (ricevute e fatture di rinnovo): è ciò che rende il parsing risolvibile e il dominio mittente un segnale forte
 - [ ] 🔐 Endpoint **webhook** di ricezione, autenticato con segreto condiviso e con limite di payload
-- [ ] 🔐 Riconducibilità dell'email a uno `User` (indirizzo di inoltro dedicato o token nell'indirizzo)
-- [ ] Idempotenza: lo stesso messaggio, riconsegnato dal provider, non deve produrre due `PaymentLog`
+- [ ] 🔐 Generazione, rotazione e rate limit del token di ricezione su `User` → [[Auth_Utenti_e_Sessioni_Supabase]]
+- [ ] Migrazione: `InboundEmail`, `PaymentProposal`, token su `User` → [[Database_Tabelle_e_Modelli_Prisma]]
+- [ ] ⚠️ **Collisione cron ↔ ingestione**: entrambi scrivono `PaymentLog` per lo stesso ciclo. L'evidenza corregge la previsione, non ne aggiunge una seconda
 - [ ] Parsing di nome, importo, valuta e data — riuso del contratto di estrazione già in uso per lo scanner → [[Lettura_Scontrini_OCR_Gemini]]
 - [ ] ⚠️ Importi in `Decimal`, date a 00:00:00 UTC prima di toccare il DB (Regole 1 e 2)
 - [ ] **Matching a punteggio con soglia** (nome normalizzato + importo + prossimità al rinnovo atteso), solo fra abbonamenti attivi
-- [ ] Sopra soglia: `PaymentLog`, **aggiornamento del prezzo** se differisce, allineamento di `nextRenewalDate` + ♻️ `revalidatePath`
+- [ ] **Ogni ricevuta genera una proposta `PENDING`**: nessuna scrittura d'autorità su `PaymentLog`, a nessun punteggio. Il punteggio ordina le proposte, non autorizza
+- [ ] Schermata di approvazione: variazione di prezzo in chiaro ("12,99 → 15,99 €") e segnali che hanno prodotto il punteggio → [[Interfaccia_Grafica_Dashboard]]
+- [ ] Approvazione in **una sola transazione**: `PaymentLog` + prezzo + `nextRenewalDate` + ♻️ `revalidatePath`
+- [ ] Mitigazioni contro l'affaticamento da conferme: approvazione in blocco e fiducia per abbonamento, entrambe **sopra** il comportamento conservativo, mai al posto suo
 - [ ] Notifica all'utente quando un prezzo cambia: un aumento non deve restare silenzioso a sua volta
-- [ ] Sotto soglia: proposta da confermare, mai creazione d'autorità
 
 ---
 
