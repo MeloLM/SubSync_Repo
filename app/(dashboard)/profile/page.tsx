@@ -2,6 +2,7 @@ import { Lock, LogOut, Trash2, AlertTriangle } from "lucide-react";
 
 import { getCurrentUser } from "@/lib/auth";
 import { signOut } from "@/actions/auth.actions";
+import { ProfileForm } from "@/components/forms/profile-form";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +40,15 @@ export default async function ProfilePage() {
         new Date(user.created_at),
       )
     : "—";
+  // Il nome vive nei `user_metadata` di Supabase: dato di identità dell'account,
+  // non della tabella applicativa. Può mancare, essere vuoto o non essere una
+  // stringa (i metadata sono JSON libero), quindi si normalizza sempre.
+  const rawName = user.user_metadata?.full_name;
+  const fullName = typeof rawName === "string" ? rawName.trim() : "";
+  const displayName = fullName || email;
+
+  // Il seed dell'avatar resta ancorato all'email: cambiare nome non deve
+  // cambiare la faccia con cui l'utente si riconosce.
   const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(email)}`;
 
   return (
@@ -49,15 +59,18 @@ export default async function ProfilePage() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={avatarUrl}
-            alt={`Avatar di ${email}`}
+            alt={`Avatar di ${displayName}`}
             className="h-20 w-20 rounded-full bg-subsync-card"
           />
         </div>
         <div className="min-w-0">
           <h1 className="truncate text-2xl font-bold tracking-tight text-white">
-            {email}
+            {displayName}
           </h1>
-          <p className="truncate text-sm text-zinc-400">Membro dal {memberSince}</p>
+          {fullName ? (
+            <p className="truncate text-sm text-zinc-400">{email}</p>
+          ) : null}
+          <p className="truncate text-xs text-zinc-500">Membro dal {memberSince}</p>
         </div>
       </header>
 
@@ -67,6 +80,7 @@ export default async function ProfilePage() {
           Account
         </h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <ProfileForm initialName={fullName} />
           <ReadOnlyField label="Email" value={email} type="email" fullWidth />
           <ReadOnlyField label="ID utente" value={user.id} fullWidth />
         </div>

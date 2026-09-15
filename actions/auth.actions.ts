@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
+import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
 
@@ -83,6 +84,48 @@ export async function signInWithGoogle(): Promise<AuthResult> {
   // `redirect` DEVE stare fuori dal try/catch: lancia NEXT_REDIRECT di proposito.
   if (!url) return { error: "Impossibile avviare l'accesso con Google." };
   redirect(url);
+}
+
+/** Lunghezza massima del nome visualizzato: un'etichetta, non un campo libero. */
+const MAX_NAME_LENGTH = 80;
+
+/**
+ * Aggiorna il nome visualizzato dell'utente.
+ *
+ * Il nome vive nei `user_metadata` di Supabase (`full_name`), non in una colonna
+ * della tabella `User`: è un dato di identità dell'account, e duplicarlo sul
+ * database applicativo significherebbe tenerne allineate due copie senza che
+ * nessuna delle due sia autorevole.
+ *
+ * Gira come Server Action e non come chiamata dal browser, pur usando la stessa
+ * API `auth.updateUser`, per due ragioni: tutte le mutazioni del progetto passano
+ * dalle Server Action (il client Supabase del browser serve solo alla sessione), e
+ * la Regola 3 impone `revalidatePath` su ogni mutazione — che esiste solo lato
+ * server. Senza, l'intestazione del profilo continuerebbe a mostrare il nome
+ * vecchio fino a un ricaricamento completo.
+ *
+ * Un nome vuoto è una richiesta legittima di rimuoverlo: l'interfaccia torna a
+ * mostrare l'email.
+ */
+export async function updateDisplayName(formData: FormData): Promise<AuthResult> {
+  const fullName = String(formData.get("fullName") ?? "").trim();
+
+  if (fullName.length > MAX_NAME_LENGTH) {
+    return { error: `Il nome non può superare i ${MAX_NAME_LENGTH} caratteri.` };
+  }
+
+  try {
+    const supabase = createClient();
+    const { error } = await supabase.auth.updateUser({
+      data: { full_name: fullName },
+    });
+    if (error) return { error: error.message };
+  } catch {
+    return { error: NOT_CONFIGURED };
+  }
+
+  revalidatePath("/profile"); // Regola 3
+  return { ok: true };
 }
 
 export async function signOut(): Promise<void> {

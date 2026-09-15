@@ -89,5 +89,29 @@ Due avvertenze operative:
 
 ---
 
+## Dati di identità dell'account
+
+Il **nome visualizzato** vive nei `user_metadata` di Supabase, sotto `full_name`,
+e non in una colonna della tabella applicativa. È un dato di identità
+dell'account: duplicarlo sul database applicativo significherebbe tenerne
+allineate due copie senza che nessuna delle due sia autorevole.
+
+Conseguenza sul codice che lo legge: i metadata sono JSON libero, quindi il valore
+può mancare, essere vuoto o non essere una stringa. Va normalizzato a ogni lettura,
+mai dato per buono. Un nome assente non è un errore — l'interfaccia ricade
+sull'email — e svuotare il campo è una richiesta legittima di rimuoverlo.
+
+La scrittura passa da una Server Action, non dal client browser, pur usando la
+stessa API `auth.updateUser`. Due ragioni: tutte le mutazioni del progetto passano
+dalle Server Action, e la Regola 3 impone `revalidatePath` su ogni mutazione, che
+esiste solo lato server. Senza, l'intestazione del profilo continuerebbe a mostrare
+il nome vecchio fino a un ricaricamento completo.
+
+⚠️ La barra laterale mostra ancora l'email, non il nome: vive nel layout della
+dashboard e `revalidatePath("/profile")` non la tocca. Allinearla richiede
+invalidare il layout, non solo la pagina. Vedi [[Interfaccia_Grafica_Dashboard]].
+
+---
+
 ## Collegato a
 [[Motore_Regole_NextJS]] · [[Database_Tabelle_e_Modelli_Prisma]] · [[Condivisione_Spese_e_Gruppi]]

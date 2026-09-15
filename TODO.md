@@ -72,6 +72,14 @@ progettarla ha fatto emergere._
 - [x] Parità da tastiera: pulsanti per punto, visibili al focus, perché le barre SVG non sono raggiungibili con Tab
 - [ ] Collaudo visivo della rifinitura: 30 barre su viewport stretto, leggibilità delle etichette dell'asse X, comportamento dei pulsanti di selezione al focus
 
+#### Debiti di UX smarcati fuori obiettivo
+
+- [x] **Banner PWA**: il rifiuto è ricordato per 30 giorni in `localStorage` (istante di scadenza, non flag), letto in `useEffect` per non produrre hydration mismatch e protetto da `try/catch`. Vale come rifiuto anche il "no" alla finestra nativa → [[App_Mobile_e_Offline_PWA]]
+- [x] **Profilo**: form del nome visualizzato su `user_metadata.full_name`, via Server Action con `revalidatePath` (Regola 3) e toast Sonner → [[Auth_Utenti_e_Sessioni_Supabase]]
+- [x] **Regola 8** istituzionalizzata in `AI_law_subsync.md`: report di esecuzione obbligatorio a ogni prompt strutturato
+- [ ] Collaudo in browser del banner PWA: serve una build di produzione in HTTPS, `beforeinstallprompt` non si attiva in sviluppo
+- [ ] La **barra laterale mostra l'email, non il nome**: vive nel layout e `revalidatePath("/profile")` non la tocca → [[Interfaccia_Grafica_Dashboard]]
+
 ### 3️⃣ Email Ingestion & Payment Matcher 🟡 → [[Email_Ingestion_e_Matching]]
 
 _La killer feature: le ricevute arrivano già per email a ogni rinnovo.
