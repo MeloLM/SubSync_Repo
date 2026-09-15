@@ -93,12 +93,18 @@ varianti, mai il contrario.
 
 ---
 
-## Parte II — Regola 7: diario di bordo modulare
+## Parte II — Regole 7 e 8: diario di bordo e report di esecuzione
+
+Il lavoro va lasciato tracciabile due volte: nel repository, per chi lo leggerà fra
+sei mesi (Regola 7), e nella risposta, per chi l'ha commissionato adesso
+(Regola 8). Sono due destinatari diversi e nessuno dei due sostituisce l'altro.
+
+### Regola 7 — Diario di bordo modulare
 
 Al termine di **ogni** task o sessione, **prima di chiedere l'ok per il commit**,
 è tassativo scrivere il diario di bordo.
 
-### Un file per task. Mai file cumulativi.
+#### Un file per task. Mai file cumulativi.
 
 **È severamente vietato accodare log a un file cumulativo di sprint.**
 Il pattern `sprint-N-changelog.md` è abolito: produceva un unico documento che
@@ -118,7 +124,7 @@ Lo slug è in minuscolo, descrittivo, separato da trattini o underscore. Se in u
 stessa giornata si completano più task, ognuno ha il suo file: la data si ripete,
 lo slug no. Un file già scritto non si modifica più.
 
-### Contenuto obbligatorio
+#### Contenuto obbligatorio
 
 Ogni file di log contiene:
 
@@ -133,6 +139,47 @@ Ogni file di log contiene:
 I log sono di sola documentazione: non entrano nel bundle Next.js.
 
 **Nessun commit va richiesto senza aver prima scritto il file di log.**
+
+---
+
+### Regola 8 — Report di esecuzione
+
+A ogni prompt strutturato — un task con azioni richieste, non una domanda di
+chiarimento — la risposta si **chiude** con un Report di esecuzione. Non è un
+riassunto di cortesia: è il documento con cui chi ha commissionato il lavoro
+decide se fidarsi del risultato senza rileggere il diff.
+
+#### Contenuto obbligatorio
+
+Cinque voci, tutte presenti anche quando la risposta è "niente da segnalare".
+Una voce omessa si legge come una voce negativa, e sarebbe una bugia per
+omissione.
+
+1. **Esito della validazione** — `tsc --noEmit`, lint e `vitest run`, ciascuno con
+   il proprio esito e il numero di test. Riportato fedelmente: se qualcosa
+   fallisce si scrive che fallisce e si mostra l'output. Se un comando non è stato
+   eseguito, si dichiara quale e perché.
+2. **Stato del working tree** — pulito o sporco, e se sporco, cosa resta fuori.
+   Verificato con `git status`, non dedotto.
+3. **Commit effettuati** — hash breve e messaggio di ciascuno, più l'esito del
+   push. Se i commit sono più d'uno, va detto cosa sta in quale.
+4. **Deviazioni dal piano** — ogni punto in cui l'implementazione si è discostata
+   da quanto concordato, con la ragione tecnica. Comprese le deroghe alle regole di
+   questo documento: una deroga si dichiara, non si nasconde. Se non ce ne sono, si
+   scrive che non ce ne sono.
+5. **Aggiornamento del log** — quale file di `.agent-logs/` è stato scritto
+   (Regola 7), più le altre scritture documentali: macro-aree di `docs/`, `TODO.md`.
+
+#### Cosa il report non è
+
+Non è il posto per attenuare. Se una funzionalità è stata scritta ma non
+collaudata, il report lo dice; se un test copre il caso felice e non gli estremi,
+il report lo dice. La Parte IV ("Fedeltà del resoconto") vale qui integralmente:
+**non dichiarare completato ciò che non è stato verificato.**
+
+Non è nemmeno un sostituto del diario di bordo. Il log serve a chi leggerà il
+repository fra sei mesi e resta immutabile; il report serve a chi legge adesso e
+vive nella conversazione. Scrivere l'uno non esime dall'altro.
 
 ---
 
@@ -197,11 +244,11 @@ Se la build fallisce, hai **due tentativi**. Al secondo fallimento fermati, non
 insistere: scrivi l'errore in `TODO.md` sotto "Errors to fix" e riferisci.
 
 ### Report di chiusura
-Alla fine di ogni intervento produci un report che contenga:
+La forma del report è fissata dalla **Regola 8** (Parte II) e non si ripete qui:
+due formulazioni della stessa regola sono peggio di nessuna regola.
 
-- esito della validazione, riportato fedelmente
-- file modificati
-- prossima task logica in coda
+Una sola aggiunta rispetto alle cinque voci obbligatorie: quando l'intervento
+chiude una task di roadmap, indica anche la **prossima task logica in coda**.
 
 ### Fedeltà del resoconto
 Se un test fallisce, dillo e mostra l'output. Se un passo è stato saltato, dillo.
