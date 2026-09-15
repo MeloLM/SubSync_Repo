@@ -82,7 +82,9 @@ export interface ChartSeriesDTO {
  * - `cash*` — **cassa**: importi pieni nel mese in cui escono davvero. Passato
  *   dai `PaymentLog` reali, futuro dalla proiezione dei rinnovi.
  * - `cash30d` — prossimi 30 giorni a granularità giornaliera, solo cassa: un
- *   mese su bucket mensili sarebbe una barra sola.
+ *   mese su bucket mensili sarebbe una barra sola. La serie contiene **tutti** i
+ *   30 giorni, a zero dove non cade nessun addebito, così l'asse X è un
+ *   calendario continuo e la distanza fra un addebito e l'altro resta leggibile.
  */
 export interface DashboardChartsDTO {
   currency: string;

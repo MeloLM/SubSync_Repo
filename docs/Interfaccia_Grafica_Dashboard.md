@@ -70,9 +70,15 @@ Tailwind, perché Recharts disegna SVG: vanno tenuti allineati a mano con
 `tailwind.config.ts`.
 
 #### Selettori e stato della vista
-Due selettori segmentati indipendenti — **metrica** (competenza / cassa) e
-**finestra** (30 giorni / 6 mesi / 1 anno) — vivono in un componente generico a
-parte, per non trasformare il grafico nel file monolitico che la Regola 5 vieta.
+Due selettori segmentati indipendenti — **tipo di spesa** e **periodo** — vivono
+in un componente generico a parte, per non trasformare il grafico nel file
+monolitico che la Regola 5 vieta.
+
+Le etichette parlano la lingua dell'utente, non quella della contabilità: *Spesa
+media* e *Addebiti reali* al posto di competenza e cassa, *30 giorni / 6 mesi /
+1 anno* al posto di 1M / 6M / 1A. La distinzione contabile resta vera nel codice e
+in [[Gestione_Pagamenti_e_Rinnovi]], dove serve; sullo schermo diventa la domanda
+a cui ciascuna vista risponde.
 Mobile-first: a tutta larghezza con i segmenti che si dividono lo spazio sotto
 `sm:`, compatti e allineati a destra da lì in su.
 
@@ -93,6 +99,34 @@ tratteggiata di riferimento etichettata "oggi"; il tooltip lo ripete a parole.
 La distinzione si disegna **solo** se la serie contiene entrambe le parti:
 attenuare tutte le barre, come accadrebbe nella vista a 30 giorni dove è tutto
 futuro, non comunicherebbe niente.
+
+#### Selezione interattiva
+Le barre si toccano per includerle o escluderle da una somma parziale: il totale
+nel footer diventa quello della selezione, con il numero di elementi e un pulsante
+per azzerarla. Senza selezione mostra il totale dell'intero periodo.
+
+Con una selezione attiva è lei a comandare l'opacità delle barre, sovrascrivendo
+la distinzione consolidato/previsto: due gerarchie visive sovrapposte sulla stessa
+proprietà non si leggerebbero.
+
+Cambiare metrica o periodo **azzera la selezione**. Le chiavi appartengono alla
+serie che le ha prodotte, e alcune sono condivise fra finestre diverse: trascinarle
+altrove lascerebbe una selezione invisibile che continua però a pilotare il totale.
+
+Le barre SVG non sono raggiungibili con Tab. La parità da tastiera è data da un
+gruppo di pulsanti, uno per punto, visibili solo quando ricevono il focus.
+
+#### L'unica aggregazione monetaria sul client
+La somma della selezione dipende da cosa l'utente tocca, quindi non è
+precalcolabile sul server senza un round-trip per ogni click: è una deroga
+consapevole alla regola che confina le aggregazioni al server.
+
+Ciò che **non** si deroga è la regola sul denaro: la somma avviene su centesimi
+interi, esatti in JavaScript ben oltre qualsiasi importo realistico, e la divisione
+per cento arriva solo alla fine, al confine di presentazione. Gli importi arrivano
+dal DTO già a due decimali fissi, quindi il parsing non passa da una
+moltiplicazione in virgola mobile. Nessun `float` tocca gli importi, qui come
+altrove.
 
 La libreria non entra nel bundle iniziale. Il grafico è caricato con
 `next/dynamic` e `ssr: false` da un wrapper client dedicato, che esiste solo

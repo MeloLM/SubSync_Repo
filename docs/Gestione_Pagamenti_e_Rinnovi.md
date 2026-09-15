@@ -75,7 +75,11 @@ nascono dalla stessa lettura memoizzata.
 - **1 anno** — sei mesi trascorsi più sei proiettati, a cavallo del presente.
 - **30 giorni** — granularità **giornaliera**, solo cassa: un mese su bucket
   mensili sarebbe una barra sola, e la domanda a cui la vista risponde è *"quando
-  mi addebitano cosa"*. I giorni senza addebiti non entrano nella serie.
+  mi addebitano cosa"*. La serie contiene **tutti** i trenta giorni, a zero dove
+  non cade nulla: restituire i soli giorni pieni produceva un asse X di tre
+  colonne accostate, dove la distanza fra un addebito e l'altro spariva e tre
+  spese ravvicinate disegnavano lo stesso grafico di tre spese distribuite sul
+  mese.
 
 #### Il confine fra consolidato e proiettato
 

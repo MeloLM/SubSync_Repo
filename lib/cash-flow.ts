@@ -60,7 +60,7 @@ export interface CashFlowMonth {
   isFuture: boolean;
 }
 
-/** Un giorno con almeno un addebito previsto (vista "prossimi 30 giorni"). */
+/** Un giorno della vista "prossimi 30 giorni", addebiti o no. */
 export interface CashFlowDay {
   dayKey: string; // "YYYY-MM-DD"
   name: string; // "3 nov"
@@ -211,48 +211,58 @@ export function computeCashFlowSeries(
 }
 
 /**
- * Vista "prossimi `days` giorni": un punto per ogni **giorno in cui cade almeno
- * un addebito**, importi sommati. I giorni vuoti non entrano nella serie.
+ * Vista "prossimi `days` giorni": **un punto per ogni giorno**, a zero dove non
+ * cade nessun addebito.
  *
  * Una finestra di un mese su bucket mensili sarebbe una barra sola: qui la
  * granularità scende al giorno, perché la domanda a cui la vista risponde è
  * "quando mi addebitano cosa", non "quanto spendo questo mese".
  *
+ * ⚠️ I giorni vuoti fanno parte della serie, e non è un dettaglio di
+ * implementazione: restituire solo i giorni con un addebito produceva un asse X
+ * fatto di tre colonne accostate, dove la distanza fra un addebito e l'altro
+ * spariva. Tre spese ravvicinate e tre spese distribuite sul mese disegnavano lo
+ * stesso grafico. Lo scheletro si costruisce prima, il riempimento viene dopo —
+ * lo stesso ordine di `emptySeries` per i mesi.
+ *
  * A differenza di `computeCashFlowSeries` la finestra parte da **oggi incluso**:
  * è una vista puramente prospettica, non si fonde con lo storico e quindi non
  * c'è alcun rischio di doppio conteggio.
  */
-export function computeUpcomingRenewals(
+export function computeDailyCashFlow(
   subscriptions: CashFlowSubscriptionInput[],
   now: Date,
   days: number,
 ): CashFlowDay[] {
   const from = toUtcMidnight(now);
   const to = addDaysUTC(from, days);
+
+  const series: CashFlowDay[] = [];
   const byDay = new Map<string, CashFlowDay>();
+
+  for (let offset = 0; offset < days; offset++) {
+    const date = addDaysUTC(from, offset);
+    const entry: CashFlowDay = {
+      dayKey: dayKeyUTC(date),
+      name: formatUTC(date, { day: "numeric", month: "short" }),
+      fullLabel: formatUTC(date, {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }),
+      total: ZERO,
+    };
+    series.push(entry);
+    byDay.set(entry.dayKey, entry);
+  }
 
   for (const sub of subscriptions) {
     for (const date of renewalOccurrencesInWindow(sub, from, to)) {
-      const key = dayKeyUTC(date);
-      const existing = byDay.get(key);
-
-      if (existing) {
-        existing.total = existing.total.add(sub.amount);
-      } else {
-        byDay.set(key, {
-          dayKey: key,
-          name: formatUTC(date, { day: "numeric", month: "short" }),
-          fullLabel: formatUTC(date, {
-            weekday: "long",
-            day: "numeric",
-            month: "long",
-            year: "numeric",
-          }),
-          total: sub.amount,
-        });
-      }
+      const day = byDay.get(dayKeyUTC(date));
+      if (day) day.total = day.total.add(sub.amount);
     }
   }
 
-  return [...byDay.values()].sort((a, b) => a.dayKey.localeCompare(b.dayKey));
+  return series;
 }

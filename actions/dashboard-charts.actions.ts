@@ -9,7 +9,7 @@ import { onlyActive } from "@/lib/subscription-status";
 import { computeNormalizedSeries } from "@/lib/spending-trend";
 import {
   computeCashFlowSeries,
-  computeUpcomingRenewals,
+  computeDailyCashFlow,
   type CashFlowDay,
   type CashFlowMonth,
 } from "@/lib/cash-flow";
@@ -111,6 +111,6 @@ export async function getDashboardCharts(): Promise<DashboardChartsDTO> {
     cash1y: toMonthlySeries(
       computeCashFlowSeries(active, payments, buckets1y, now),
     ),
-    cash30d: toDailySeries(computeUpcomingRenewals(active, now, UPCOMING_DAYS)),
+    cash30d: toDailySeries(computeDailyCashFlow(active, now, UPCOMING_DAYS)),
   };
 }

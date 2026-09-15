@@ -4,9 +4,9 @@ import { ZERO, money, type Money } from "@/lib/money";
 import { buildMonthBuckets, toUtcMidnight } from "@/lib/date";
 import {
   computeCashFlowSeries,
+  computeDailyCashFlow,
   computeHistoricalCashFlow,
   computeProjectedCashFlow,
-  computeUpcomingRenewals,
   renewalOccurrencesInWindow,
   type CashFlowSubscriptionInput,
 } from "@/lib/cash-flow";
@@ -210,9 +210,31 @@ describe("computeCashFlowSeries()", () => {
   });
 });
 
-describe("computeUpcomingRenewals()", () => {
-  it("somma gli addebiti dello stesso giorno e scarta i giorni vuoti", () => {
-    const days = computeUpcomingRenewals(
+describe("computeDailyCashFlow()", () => {
+  /**
+   * L'asse X deve essere un calendario continuo, non un elenco di addebiti:
+   * restituendo solo i giorni pieni, tre spese ravvicinate e tre spese
+   * distribuite sul mese disegnavano lo stesso identico grafico.
+   */
+  it("restituisce un punto per ogni giorno della finestra, addebiti o no", () => {
+    const days = computeDailyCashFlow([sub("10.00", "MONTHLY", "2026-08-25")], NOW, 30);
+
+    expect(days).toHaveLength(30);
+    expect(days[0].dayKey).toBe("2026-08-21"); // oggi
+    expect(days[29].dayKey).toBe("2026-09-19");
+  });
+
+  it("i giorni consecutivi non hanno buchi, nemmeno a cavallo del mese", () => {
+    const days = computeDailyCashFlow([], NOW, 30);
+    const keys = days.map((d) => d.dayKey);
+
+    expect(keys).toContain("2026-08-31");
+    expect(keys).toContain("2026-09-01");
+    expect(keys[keys.indexOf("2026-08-31") + 1]).toBe("2026-09-01");
+  });
+
+  it("somma gli addebiti dello stesso giorno e lascia gli altri a zero", () => {
+    const days = computeDailyCashFlow(
       [
         sub("10.00", "MONTHLY", "2026-08-25"),
         sub("5.00", "MONTHLY", "2026-08-25"),
@@ -221,37 +243,44 @@ describe("computeUpcomingRenewals()", () => {
       NOW,
       30,
     );
-    expect(days.map((d) => [d.dayKey, d.total.toFixed(2)])).toEqual([
+
+    const valued = days
+      .filter((d) => !d.total.isZero())
+      .map((d) => [d.dayKey, d.total.toFixed(2)]);
+
+    expect(valued).toEqual([
       ["2026-08-25", "15.00"],
       ["2026-09-10", "7.00"],
     ]);
+    expect(days.filter((d) => d.total.isZero())).toHaveLength(28);
   });
 
-  it("include un rinnovo che cade oggi", () => {
-    const days = computeUpcomingRenewals(
+  it("include un rinnovo che cade oggi, nel primo punto della serie", () => {
+    const days = computeDailyCashFlow(
       [sub("12.00", "MONTHLY", "2026-08-21")],
       NOW,
       30,
     );
-    expect(days.map((d) => d.dayKey)).toEqual(["2026-08-21"]);
+    expect(days[0].total.toFixed(2)).toBe("12.00");
   });
 
-  it("esclude ciò che cade oltre la finestra", () => {
-    const days = computeUpcomingRenewals(
+  it("lascia la serie a zero per ciò che cade oltre la finestra", () => {
+    const days = computeDailyCashFlow(
       [sub("12.00", "MONTHLY", "2026-09-30")],
       NOW,
       30,
     );
-    expect(days).toEqual([]);
+    expect(days).toHaveLength(30);
+    expect(days.every((d) => d.total.isZero())).toBe(true);
   });
 
-  it("esclude gli abbonamenti cessati", () => {
-    const days = computeUpcomingRenewals(
+  it("lascia la serie a zero per gli abbonamenti cessati", () => {
+    const days = computeDailyCashFlow(
       [sub("12.00", "MONTHLY", "2026-08-25", "2026-08-01")],
       NOW,
       30,
     );
-    expect(days).toEqual([]);
+    expect(days.every((d) => d.total.isZero())).toBe(true);
   });
 });
 

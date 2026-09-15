@@ -18,18 +18,16 @@ import { ChartToggle } from "@/components/dashboard/chart-toggle";
 import { ChartTooltip } from "@/components/dashboard/chart-tooltip";
 
 /**
- * 📊 Grafico di spesa — BarChart Recharts con selettori di metrica e finestra.
+ * 📊 Grafico di spesa — BarChart Recharts con selettori e selezione interattiva.
  *
  * Riceve un DTO con **tutte** le serie già aggregate lato server (Regola 4): qui
  * si fa SOLO presentazione, e cambiare vista è un `useState`, non un round-trip.
- * La conversione `Number()` è confinata al valore da disegnare e ai formatter,
- * mai usata per calcolare denaro.
  *
- * Barre e non aree, anche per la cassa: i punti sono totali discreti e un'area
- * interpolerebbe valori inesistenti fra un punto e l'altro. Sul flusso di cassa
- * l'argomento è più forte, non più debole — fra un picco e l'altro il valore
- * reale è zero, e una rampa continua verso i 120 € di novembre suggerirebbe una
- * spesa progressiva che non avviene.
+ * Barre e non aree, anche per gli addebiti: i punti sono totali discreti e
+ * un'area interpolerebbe valori inesistenti fra un punto e l'altro. Sul flusso
+ * di cassa l'argomento è più forte, non più debole — fra un picco e l'altro il
+ * valore reale è zero, e una rampa continua verso i 120 € di novembre
+ * suggerirebbe una spesa progressiva che non avviene.
  */
 
 // Design system "Graphite & Neon". Recharts disegna SVG: servono i valori,
@@ -39,41 +37,42 @@ const CYAN = "#06B6D4";
 const GRID = "#3F3F46"; // zinc-700
 const AXIS_TEXT = "#71717A"; // zinc-500
 
-/** Opacità delle barre proiettate, quando la serie mostra anche il consolidato. */
+/** Opacità delle barre previste, quando la serie mostra anche il consolidato. */
 const PROJECTED_OPACITY = 0.4;
+/** Opacità delle barre escluse da una selezione attiva. */
+const UNSELECTED_OPACITY = 0.3;
 
 type Metric = "accrual" | "cash";
 type Range = "30d" | "6m" | "1y";
 
 const METRIC_OPTIONS = [
-  { value: "accrual" as const, label: "Competenza" },
-  { value: "cash" as const, label: "Cassa" },
+  { value: "accrual" as const, label: "Spesa media" },
+  { value: "cash" as const, label: "Addebiti reali" },
 ];
 
 const RANGE_OPTIONS = [
-  { value: "30d" as const, label: "1M" },
-  { value: "6m" as const, label: "6M" },
-  { value: "1y" as const, label: "1A" },
+  { value: "30d" as const, label: "30 giorni" },
+  { value: "6m" as const, label: "6 mesi" },
+  { value: "1y" as const, label: "1 anno" },
 ];
 
 /** Didascalia e stato vuoto dipendono dalla vista, non dal numero di punti. */
 const CAPTIONS: Record<string, string> = {
-  "accrual-6m": "Costo normalizzato, ultimi 6 mesi",
-  "accrual-1y": "Costo normalizzato, 6 mesi trascorsi e 6 proiettati",
-  "cash-6m": "Uscite reali, ultimi 6 mesi",
-  "cash-1y": "Uscite reali e proiettate, 12 mesi",
-  "cash-30d": "Addebiti previsti, prossimi 30 giorni",
+  "accrual-6m": "Quanto spendi in media ogni mese, ultimi 6 mesi",
+  "accrual-1y": "Quanto spendi in media ogni mese, 6 trascorsi e 6 previsti",
+  "cash-6m": "Quanto è uscito davvero dal conto, ultimi 6 mesi",
+  "cash-1y": "Quanto è uscito e quanto uscirà, 12 mesi",
+  "cash-30d": "Cosa ti viene addebitato, giorno per giorno",
 };
 
 const EMPTY_STATES: Record<string, string> = {
   "accrual-6m":
     "Nessun abbonamento attivo negli ultimi 6 mesi. Il grafico si popola al primo abbonamento inserito.",
   "accrual-1y":
-    "Nessun abbonamento attivo in questa finestra. Il grafico si popola al primo abbonamento inserito.",
+    "Nessun abbonamento attivo in questo periodo. Il grafico si popola al primo abbonamento inserito.",
   "cash-6m":
-    "Nessuna uscita registrata negli ultimi 6 mesi. Lo storico di cassa si popola al primo rinnovo.",
-  "cash-1y":
-    "Nessuna uscita registrata o prevista in questa finestra.",
+    "Nessuna uscita registrata negli ultimi 6 mesi. Lo storico si popola al primo rinnovo.",
+  "cash-1y": "Nessuna uscita registrata o prevista in questo periodo.",
   "cash-30d": "Nessun addebito previsto nei prossimi 30 giorni.",
 };
 
@@ -87,18 +86,62 @@ function pickSeries(
   return range === "6m" ? data.cash6m : data.cash1y;
 }
 
+/**
+ * Converte un importo "12.34" in **centesimi interi**.
+ *
+ * La somma della selezione è l'unica aggregazione monetaria che avviene sul
+ * client, ed è una deroga consapevole: dipende da cosa l'utente clicca, quindi
+ * non può essere precalcolata sul server senza un round-trip per ogni click.
+ *
+ * Quello che NON si deroga è la Regola 1: nessun `float` tocca gli importi. La
+ * somma avviene su interi (esatti in JS fino a 2^53, cioè miliardi di miliardi
+ * di centesimi) e la divisione per 100 arriva solo alla fine, al confine di
+ * presentazione, esattamente come fa `formatMoney` lato server.
+ *
+ * I valori arrivano dal DTO già a due decimali fissi (`toFixed(2)`), quindi il
+ * parsing è deterministico e non passa da `Number(x) * 100`, che reintrodurrebbe
+ * l'aritmetica in virgola mobile.
+ */
+function toCents(fixed2: string): number {
+  const negative = fixed2.startsWith("-");
+  const [whole, frac = ""] = (negative ? fixed2.slice(1) : fixed2).split(".");
+  const cents = Number(whole) * 100 + Number(frac.padEnd(2, "0").slice(0, 2));
+  return negative ? -cents : cents;
+}
+
 export function SpendingChart({ data }: { data: DashboardChartsDTO }) {
   const [metric, setMetric] = useState<Metric>("accrual");
   const [range, setRange] = useState<Range>("6m");
+  const [selection, setSelection] = useState<Set<string>>(new Set());
 
-  // La vista a 30 giorni esiste solo per la cassa: una spesa normalizzata al
+  // La vista a 30 giorni esiste solo per gli addebiti reali: una spesa media al
   // giorno non significa nulla. Invece di forzare lo stato, si deriva la metrica
-  // effettiva — così tornando a 6M o 1A si ritrova la scelta precedente.
+  // effettiva — così tornando a 6 mesi o 1 anno si ritrova la scelta precedente.
   const effectiveMetric: Metric = range === "30d" ? "cash" : metric;
   const viewKey = `${effectiveMetric}-${range}`;
 
   const series = pickSeries(data, effectiveMetric, range);
   const { currency } = data;
+
+  // Cambiare vista azzera la selezione: le chiavi appartengono alla serie che le
+  // ha prodotte, e trascinarle altrove lascerebbe una selezione invisibile che
+  // continua però a pilotare il totale nel footer.
+  const changeMetric = (next: Metric) => {
+    setMetric(next);
+    setSelection(new Set());
+  };
+  const changeRange = (next: Range) => {
+    setRange(next);
+    setSelection(new Set());
+  };
+
+  const toggleSelection = (key: string) => {
+    setSelection((current) => {
+      const next = new Set(current);
+      if (!next.delete(key)) next.add(key);
+      return next;
+    });
+  };
 
   // Formatter locali: NON importiamo lib/money (server-only, dipende da Prisma).
   const formatCurrency = (value: number) =>
@@ -119,29 +162,48 @@ export function SpendingChart({ data }: { data: DashboardChartsDTO }) {
   }));
   const max = Math.max(...points.map((p) => p.value), 0);
 
-  // La distinzione consolidato/proiettato si disegna solo se la serie contiene
+  const hasSelection = selection.size > 0;
+
+  // Somma in centesimi interi, mai in virgola mobile (vedi `toCents`).
+  const totalCents = hasSelection
+    ? points.reduce(
+        (acc, point) => (selection.has(point.key) ? acc + toCents(point.total) : acc),
+        0,
+      )
+    : toCents(series.total);
+
+  // La distinzione consolidato/previsto si disegna solo se la serie contiene
   // entrambi: attenuare tutte le barre non comunicherebbe nulla.
   const showsBoundary =
     points.some((p) => p.isFuture) && points.some((p) => !p.isFuture);
   const firstFutureName = points.find((p) => p.isFuture)?.name;
 
+  /** Recharts espone il punto in forme diverse a seconda della versione. */
+  const resolveKey = (entry: unknown, index: number): string | undefined => {
+    const direct = (entry as { key?: unknown } | undefined)?.key;
+    if (typeof direct === "string") return direct;
+    const nested = (entry as { payload?: { key?: unknown } } | undefined)?.payload
+      ?.key;
+    if (typeof nested === "string") return nested;
+    return points[index]?.key;
+  };
+
   const toggles = (
     <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
       <ChartToggle
-        label="Metrica"
+        label="Tipo di spesa"
         value={effectiveMetric}
-        onChange={setMetric}
+        onChange={changeMetric}
         options={METRIC_OPTIONS.map((option) => ({
           ...option,
           disabled: range === "30d" && option.value === "accrual",
-          disabledHint:
-            "Il costo normalizzato non è definito a granularità giornaliera.",
+          disabledHint: "La spesa media si calcola sul mese, non sul giorno.",
         }))}
       />
       <ChartToggle
-        label="Finestra temporale"
+        label="Periodo"
         value={range}
-        onChange={setRange}
+        onChange={changeRange}
         options={RANGE_OPTIONS}
       />
     </div>
@@ -186,7 +248,7 @@ export function SpendingChart({ data }: { data: DashboardChartsDTO }) {
               axisLine={{ stroke: GRID }}
               tick={{ fill: AXIS_TEXT, fontSize: 12 }}
               interval="preserveStartEnd"
-              minTickGap={6}
+              minTickGap={16}
               dy={4}
             />
             <YAxis
@@ -201,13 +263,17 @@ export function SpendingChart({ data }: { data: DashboardChartsDTO }) {
               content={({ active, payload }) => {
                 if (!active || !payload?.length) return null;
                 const point = payload[0].payload as (typeof points)[number];
+                const note = selection.has(point.key)
+                  ? "selezionato"
+                  : showsBoundary && point.isFuture
+                    ? "previsto"
+                    : undefined;
+
                 return (
                   <ChartTooltip
                     label={point.fullLabel}
                     value={formatCurrency(point.value)}
-                    note={
-                      showsBoundary && point.isFuture ? "proiettato" : undefined
-                    }
+                    note={note}
                   />
                 );
               }}
@@ -227,13 +293,30 @@ export function SpendingChart({ data }: { data: DashboardChartsDTO }) {
               />
             ) : null}
 
-            <Bar dataKey="value" radius={[6, 6, 0, 0]} maxBarSize={56}>
+            <Bar
+              dataKey="value"
+              radius={[6, 6, 0, 0]}
+              maxBarSize={56}
+              onClick={(entry: unknown, index: number) => {
+                const key = resolveKey(entry, index);
+                if (key) toggleSelection(key);
+              }}
+            >
               {points.map((point) => (
                 <Cell
                   key={point.key}
+                  cursor="pointer"
                   fill="url(#spendingBar)"
+                  // Con una selezione attiva è lei a comandare l'opacità: due
+                  // gerarchie visive sovrapposte non si leggerebbero.
                   fillOpacity={
-                    showsBoundary && point.isFuture ? PROJECTED_OPACITY : 1
+                    hasSelection
+                      ? selection.has(point.key)
+                        ? 1
+                        : UNSELECTED_OPACITY
+                      : showsBoundary && point.isFuture
+                        ? PROJECTED_OPACITY
+                        : 1
                   }
                 />
               ))}
@@ -242,18 +325,58 @@ export function SpendingChart({ data }: { data: DashboardChartsDTO }) {
         </ResponsiveContainer>
       </div>
 
-      <figcaption className="mt-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+      {/* Parità da tastiera: le barre SVG non sono raggiungibili con Tab, questi
+          controlli sì. Visibili solo quando ricevono il focus. */}
+      <div
+        role="group"
+        aria-label="Seleziona i periodi da sommare"
+        className="flex flex-wrap gap-1"
+      >
+        {points.map((point) => (
+          <button
+            key={point.key}
+            type="button"
+            onClick={() => toggleSelection(point.key)}
+            aria-pressed={selection.has(point.key)}
+            className="sr-only focus:not-sr-only focus:rounded focus:border focus:border-subsync-cyan focus:px-2 focus:py-1 focus:text-xs focus:text-zinc-200"
+          >
+            {point.fullLabel} — {formatCurrency(point.value)}
+          </button>
+        ))}
+      </div>
+
+      <figcaption className="mt-4 flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
         <span className="text-xs text-zinc-500">
-          {CAPTIONS[viewKey]}
-          {showsBoundary ? (
-            <span className="ml-2 text-zinc-600">
-              — barre attenuate: proiezione
-            </span>
+          {hasSelection
+            ? "Tocca una barra per aggiungerla o toglierla"
+            : CAPTIONS[viewKey]}
+          {showsBoundary && !hasSelection ? (
+            <span className="ml-2 text-zinc-600">— barre chiare: previsione</span>
           ) : null}
         </span>
-        <span className="text-sm font-semibold tabular-nums text-zinc-200">
-          {formatCurrency(Number(series.total))}
-        </span>
+
+        <div className="flex items-center gap-3">
+          {hasSelection ? (
+            <button
+              type="button"
+              onClick={() => setSelection(new Set())}
+              className="rounded-md border border-zinc-800 px-2 py-1 text-[11px] text-zinc-400 transition-colors hover:border-zinc-700 hover:text-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-subsync-cyan"
+            >
+              Azzera
+            </button>
+          ) : null}
+
+          <div className="text-right">
+            <span className="block text-[11px] text-zinc-500">
+              {hasSelection
+                ? `Totale selezione · ${selection.size}`
+                : "Totale del periodo"}
+            </span>
+            <span className="block text-sm font-semibold tabular-nums text-zinc-200">
+              {formatCurrency(totalCents / 100)}
+            </span>
+          </div>
+        </div>
       </figcaption>
     </figure>
   );

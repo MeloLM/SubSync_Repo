@@ -60,8 +60,17 @@ progettarla ha fatto emergere._
 - [x] Tutte le serie precalcolate in una sola lettura (Regola 4): cambiare vista non è un round-trip
 - [x] UI: due selettori segmentati indipendenti, mobile-first, estratti in un componente proprio (Regola 5) → [[Interfaccia_Grafica_Dashboard]]
 - [x] BarChart con opacità differenziata e `ReferenceLine` "oggi"; nessun `ComposedChart`
+- [x] Collaudo visivo: superato sui calcoli, ha prodotto tre rilievi di UX, tutti chiusi sotto
 - [ ] ⚠️ **Deriva residua di ancoraggio**: dopo un passaggio da un mese corto il 31 diventa 28 e non torna indietro. Serve un campo `anchorDay` sullo schema → [[Database_Tabelle_e_Modelli_Prisma]]
-- [ ] Collaudo visivo su viewport stretto delle 12 barre della finestra annuale
+
+#### Rifinitura UX del grafico (dal collaudo visivo)
+
+- [x] **Asse X continuo** nella vista a 30 giorni: la serie contiene tutti i giorni, a zero dove non cade nulla. Prima erano tre colonne accostate e la distanza fra un addebito e l'altro spariva
+- [x] **Testi in lingua utente**: "Spesa media" / "Addebiti reali" al posto di competenza e cassa, "30 giorni / 6 mesi / 1 anno" al posto di 1M / 6M / 1A, didascalie riscritte come domande
+- [x] **Selezione interattiva** delle barre con somma dinamica nel footer, contatore e pulsante di azzeramento; la selezione si azzera al cambio di vista → [[Interfaccia_Grafica_Dashboard]]
+- [x] ⚠️ Somma della selezione in **centesimi interi**, non in virgola mobile: unica aggregazione monetaria sul client, deroga consapevole alla Regola 4 ma non alla Regola 1
+- [x] Parità da tastiera: pulsanti per punto, visibili al focus, perché le barre SVG non sono raggiungibili con Tab
+- [ ] Collaudo visivo della rifinitura: 30 barre su viewport stretto, leggibilità delle etichette dell'asse X, comportamento dei pulsanti di selezione al focus
 
 ### 3️⃣ Email Ingestion & Payment Matcher 🟡 → [[Email_Ingestion_e_Matching]]
 
