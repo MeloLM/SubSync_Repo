@@ -389,13 +389,73 @@ le pagine legali già pubblicate dichiarano.
 
 ---
 
+## Provider inbound
+
+Raccomandazione tecnica, **da approvare**. Tre requisiti la governano, tutti
+derivati dai nodi risolti sopra:
+
+1. **`Message-ID` grezzo raggiungibile** — senza, l'idempotenza ricade sull'hash
+   del contenuto per ogni messaggio, con garanzie più deboli.
+2. **Destinatario di busta esposto** — vedi sotto: è l'unico modo affidabile di
+   sapere su quale indirizzo dedicato è arrivato il messaggio.
+3. **Payload JSON** — un route handler su Vercel che deve smontare a mano un
+   `multipart/form-data` è lavoro in più su contenuto non fidato.
+
+### ⚠️ Correzione al Nodo 1: l'identità sta nella busta, non nell'intestazione
+
+Progettando il webhook emerge un dettaglio che il disegno dell'identità non
+copriva. **L'intestazione `To` non contiene affatto il nostro indirizzo dedicato
+quando il messaggio arriva per inoltro automatico**: conserva il destinatario
+originale, cioè la casella personale dell'utente. Leggere il token da `To`
+fallirebbe proprio nel caso d'uso principale, esattamente come il matching sul
+mittente.
+
+Il token va letto dal **destinatario di busta** (`RCPT TO` del dialogo SMTP), che i
+provider espongono in un campo dedicato. Conseguenza sulla scelta: un provider che
+non lo espone è inutilizzabile, non scomodo.
+
+### Confronto
+
+| Provider | `Message-ID` | Destinatario di busta | Formato | Giudizio |
+| -------- | ------------ | --------------------- | ------- | -------- |
+| **Postmark** | nell'array `Headers` completo | `OriginalRecipient`, più `MailboxHash` per il token | **JSON** | Il più diretto |
+| Mailgun | campo dedicato in modalità parsed | `recipient` | form-encoded | Solido, firma HMAC da verificare |
+| SendGrid | solo dentro `headers` grezzi, da parsare a mano | `envelope` (JSON dentro un campo) | `multipart/form-data` | Funziona, più impalcatura |
+| Cloudflare Email Workers | MIME grezzo, tutto disponibile | disponibile | nessuno, MIME puro | Controllo massimo, lavoro massimo |
+| Resend | **da verificare** | da verificare | JSON | Ottimo in uscita; la maturità dell'inbound va accertata prima di sceglierlo, non data per buona |
+
+### Raccomandazione: Postmark
+
+- **JSON nativo.** Il route handler riceve un oggetto, non un `multipart` da
+  smontare: meno codice su contenuto proveniente da internet.
+- **`MailboxHash` è fatto per questo.** Con indirizzi nella forma
+  `receipts+<token>@in.subsync.app`, il provider estrae il token e lo consegna in
+  un campo suo. È il motivo per cui conviene passare dalla forma
+  `<token>@in.subsync.app` a quella con separatore: si allinea a una funzione di
+  prima classe invece di ricavare il token a mano.
+- **`Headers` completo**, quindi `Message-ID` e risultati di autenticazione sono
+  entrambi raggiungibili dallo stesso payload.
+
+### Vincoli operativi da tenere presenti
+
+- **Vercel rifiuta i corpi oltre ~4,5 MB.** Una fattura con PDF allegato può
+  avvicinarsi al limite: gli allegati vanno esclusi in configurazione, o il
+  messaggio scartato con `DISCARDED` prima di tentarne l'elaborazione.
+- **Dominio di ricezione separato** (`in.subsync.app`) con record MX propri, per
+  non toccare la posta del dominio principale.
+- Il webhook resta comunque autenticato con segreto condiviso: il provider è un
+  mittente fidato, non una dispensa dall'autenticazione.
+
+---
+
 ## Cosa resta aperto
 
-I tre nodi di modello sono chiusi. Restano decisioni di implementazione:
+I tre nodi di modello sono chiusi e lo schema è scritto. Restano:
 
-- scelta del **provider inbound** e verifica che esponga il `Message-ID` grezzo e
-  gli esiti di autenticazione;
-- **dominio** di ricezione e sua configurazione DNS (MX, SPF);
+- **approvazione della scelta del provider** e verifica sul campo dei tre
+  requisiti;
+- **configurazione DNS** del dominio di ricezione (MX, SPF, DMARC);
+- **migrazione** dei nuovi modelli, da generare contro il database reale;
 - **taratura della soglia** di punteggio, che si può fare solo su ricevute vere;
 - forma della **schermata di approvazione**, da progettare con
   [[Interfaccia_Grafica_Dashboard]].

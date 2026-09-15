@@ -93,7 +93,12 @@ giorno dell'inserimento._
 - [x] **Ambito ristretto alle sole email transazionali** (ricevute e fatture di rinnovo): è ciò che rende il parsing risolvibile e il dominio mittente un segnale forte
 - [ ] 🔐 Endpoint **webhook** di ricezione, autenticato con segreto condiviso e con limite di payload
 - [ ] 🔐 Generazione, rotazione e rate limit del token di ricezione su `User` → [[Auth_Utenti_e_Sessioni_Supabase]]
-- [ ] Migrazione: `InboundEmail`, `PaymentProposal`, token su `User` → [[Database_Tabelle_e_Modelli_Prisma]]
+- [x] **Schema Prisma**: `InboundEmail`, `PaymentProposal`, `inboundToken` su `User`, `source` su `PaymentLog` e cinque nuovi enum. `prisma validate` e `generate` verdi → [[Database_Tabelle_e_Modelli_Prisma]]
+- [ ] ⚠️ **Migrazione non generata**: richiede `DIRECT_URL`, non disponibile in locale per scelta. Passo di rilascio consapevole, da eseguire contro Supabase
+- [ ] 🔐 Scelta del provider inbound — **raccomandato Postmark** (JSON nativo, `MailboxHash`, `Headers` completo): da approvare e verificare sul campo
+- [ ] ⚠️ **Identità dal destinatario di busta, non da `To`**: l'inoltro automatico conserva il destinatario originale, quindi il token non compare in `To`. Vincolo sulla scelta del provider, non un dettaglio
+- [ ] Indirizzi nella forma `receipts+<token>@in.subsync.app` per allinearsi a `MailboxHash`, se si conferma Postmark
+- [ ] DNS del dominio di ricezione: MX, SPF, DMARC su `in.subsync.app`
 - [ ] ⚠️ **Collisione cron ↔ ingestione**: entrambi scrivono `PaymentLog` per lo stesso ciclo. L'evidenza corregge la previsione, non ne aggiunge una seconda
 - [ ] Parsing di nome, importo, valuta e data — riuso del contratto di estrazione già in uso per lo scanner → [[Lettura_Scontrini_OCR_Gemini]]
 - [ ] ⚠️ Importi in `Decimal`, date a 00:00:00 UTC prima di toccare il DB (Regole 1 e 2)

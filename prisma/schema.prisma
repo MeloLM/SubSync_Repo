@@ -49,6 +49,52 @@ enum VatRegime {
   NON_TAXABLE // non imponibile
 }
 
+// ─── Sprint 8 — Email Ingestion ─────────────────────────────────────────────
+
+// Ciclo di vita di un messaggio ricevuto. Rivendicato PRIMA dell'elaborazione,
+// così un crash a metà strada non lo fa elaborare due volte al ritentativo.
+// Solo FAILED è rielaborabile: gli altri sono stati terminali.
+enum InboundStatus {
+  RECEIVED // rivendicato, non ancora elaborato
+  PARSED // estrazione riuscita
+  PROPOSED // ha prodotto una PaymentProposal
+  DISCARDED // non è una ricevuta transazionale: fuori ambito
+  FAILED // errore di elaborazione, ritentabile
+}
+
+// Da dove viene la chiave di deduplicazione. Message-ID e hash del contenuto
+// hanno garanzie diverse: sapere quale si sta guardando serve quando qualcosa
+// va storto.
+enum DedupeSource {
+  MESSAGE_ID // header RFC 5322, normalizzato
+  CONTENT_HASH // ripiego: SHA-256 di from + subject + date + corpo
+}
+
+enum ProposalStatus {
+  PENDING // in attesa dell'utente: NON è ancora denaro
+  APPROVED
+  REJECTED
+  EXPIRED // mai risolta entro il periodo previsto
+}
+
+// Come si è materializzata l'approvazione. È la traduzione sullo schema della
+// regola "l'evidenza vince sulla previsione": se il cron aveva già scritto il
+// pagamento di quel ciclo, la ricevuta lo CORREGGE, non ne aggiunge un secondo.
+enum ProposalResolution {
+  CREATED // nessun PaymentLog per quel ciclo: ne è nato uno nuovo
+  RECONCILED // esisteva già (tipicamente da cron): corretto con i dati reali
+}
+
+// Origine di un pagamento. È un'ETICHETTA, non un filtro: nessun calcolo deve
+// selezionare per `source` per essere corretto, quindi dimenticarsene non
+// produce numeri sbagliati. È la ragione per cui questa colonna è ammessa dove
+// uno `status` su PaymentLog non lo sarebbe.
+enum PaymentSource {
+  CRON // previsione: la data di rinnovo è arrivata
+  EMAIL // evidenza: esiste una ricevuta
+  MANUAL
+}
+
 model User {
   id            String               @id @default(cuid())
   email         String               @unique
@@ -56,6 +102,21 @@ model User {
   subscriptions Subscription[]
   memberships   SubscriptionMember[] // Abbonamenti condivisi con questo utente
   categories    ExpenseCategory[] // Categorie di spesa personalizzate (Sprint 7)
+
+  // ─── Email Ingestion (Sprint 8) ───────────────────────────────────────────
+  // Parte locale dell'indirizzo di ricezione dedicato: <token>@in.subsync.app.
+  // Valore casuale da 128 bit in base32, NON derivato da `id`.
+  //
+  // ⚠️ È una credenziale al portatore: chi lo conosce può depositare ricevute in
+  // questo account. Da qui due conseguenze sullo schema. Sta in una colonna a sé
+  // e non coincide con `id`, perché un identificatore non si può ruotare e un
+  // indirizzo destinato a finire in una regola di inoltro prima o poi trapela;
+  // ed è nullable, perché si genera su richiesta e non alla registrazione.
+  inboundToken          String?   @unique
+  inboundTokenRotatedAt DateTime?
+
+  inboundEmails InboundEmail[]
+  proposals     PaymentProposal[]
 }
 
 model Subscription {
@@ -71,6 +132,7 @@ model Subscription {
   canceledAt      DateTime? // Soft-delete: null = attivo. Regola 2: 00:00:00 UTC
   payments        PaymentLog[]
   members         SubscriptionMember[] // Split-Billing: partecipanti invitati
+  proposals       PaymentProposal[] // Ricevute email associate, in attesa o risolte
 
   // ─── Fiscalità (Sprint 7) — campi additivi, default retro-compatibili ───
   // Gli abbonamenti esistenti diventano PERSONAL e non deducibili.
@@ -135,6 +197,14 @@ model SubscriptionMember {
   @@index([email])
 }
 
+// Un pagamento avvenuto. INVARIANTE: ogni riga è denaro che si è mosso.
+//
+// ⚠️ Non aggiungere qui uno stato "in attesa di conferma". Lo storico del flusso
+// di cassa, il Burn Rate e la timeline leggono questa tabella senza filtrarla,
+// perché non c'è niente da filtrare: righe non confermate obbligherebbero ogni
+// lettore ad aggiungere una condizione, e dimenticarla non darebbe un errore ma
+// un totale gonfiato. Le proposte vivono in `PaymentProposal`, tabella che
+// nessun calcolo somma.
 model PaymentLog {
   id             String       @id @default(cuid())
   subscriptionId String
@@ -142,5 +212,115 @@ model PaymentLog {
   amount         Decimal      @db.Decimal(12, 2) // Regola 1
   paidAt         DateTime     @default(now())
 
+  // Chi ha scritto questa riga. Etichetta diagnostica, mai un filtro (vedi
+  // PaymentSource). Il default riflette lo stato attuale: finora il cron è
+  // l'unica sorgente, quindi le righe esistenti sono tutte CRON.
+  source PaymentSource @default(CRON)
+
+  // Popolata quando una ricevuta ha confermato o corretto questo pagamento:
+  // una riga con una proposta collegata è corroborata da un documento reale,
+  // non solo prevista dal calendario dei rinnovi.
+  proposal PaymentProposal?
+
+  @@index([subscriptionId])
+}
+
+/// Messaggio ricevuto sull'indirizzo dedicato di un utente.
+///
+/// È il registro dell'idempotenza: ogni messaggio viene **rivendicato** qui
+/// prima di essere elaborato, e il vincolo di unicità impedisce che due consegne
+/// concorrenti dello stesso messaggio producano due elaborazioni.
+model InboundEmail {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Message-ID normalizzato (parentesi angolari rimosse, spazi tagliati) oppure,
+  // quando manca o è malformato, l'hash del contenuto.
+  dedupeKey    String
+  dedupeSource DedupeSource
+
+  fromAddress String
+  subject     String
+  receivedAt  DateTime
+
+  status   InboundStatus @default(RECEIVED)
+  attempts Int           @default(0)
+  error    String?
+
+  /// Esiti SPF/DKIM/ARC riportati dal provider inbound. Segnale di FIDUCIA nel
+  /// contenuto, mai di identità: l'inoltro automatico rompe SPF quasi sempre, e
+  /// un controllo bloccante scarterebbe la maggioranza dei messaggi legittimi.
+  authResults Json?
+
+  /// Risultato strutturato dell'estrazione. **Non** il corpo del messaggio: del
+  /// contenuto si conserva il minimo indispensabile, perché è posta di persone
+  /// reali e il modo più sicuro di trattare un dato sensibile è non averlo.
+  parsedData Json?
+
+  proposal  PaymentProposal?
+  createdAt DateTime         @default(now())
+
+  // ⚠️ L'idempotenza vive QUI, non in un controllo applicativo: `SELECT` poi
+  // `INSERT` sono due operazioni, e due consegne concorrenti le superano
+  // entrambe. Si tenta l'inserimento per primo e si intercetta la violazione.
+  //
+  // Lo scope è per utente e non globale di proposito: la stessa ricevuta
+  // familiare inoltrata da due conviventi con account distinti è due fatti
+  // legittimi, non un duplicato.
+  @@unique([userId, dedupeKey])
+  @@index([userId, status])
+}
+
+/// Pagamento estratto da una ricevuta, **in attesa di approvazione**.
+///
+/// Nessuna riga di questa tabella è denaro finché l'utente non conferma: è la
+/// barriera che impedisce a un errore di lettura dell'estrattore di entrare nello
+/// storico di cassa, dove sarebbe una bugia permanente nel grafico.
+model PaymentProposal {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Una proposta per messaggio: è il messaggio a generarla.
+  inboundEmailId String       @unique
+  inboundEmail   InboundEmail @relation(fields: [inboundEmailId], references: [id], onDelete: Cascade)
+
+  // Abbonamento riconosciuto, oppure null quando nessuno corrisponde: in quel
+  // caso l'approvazione creerà anche l'abbonamento, partendo da `serviceName`.
+  subscriptionId String?
+  subscription   Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  /// Nome del servizio come estratto dalla ricevuta.
+  serviceName String
+  amount      Decimal  @db.Decimal(12, 2) // Regola 1
+  currency    String   @default("EUR")
+  paidAt      DateTime // Regola 2: 00:00:00 UTC
+
+  /// Nuovo prezzo dell'abbonamento, se la ricevuta ne segnala uno diverso.
+  /// Approvare applica anche questo: un aumento non deve passare inosservato,
+  /// ma nemmeno essere applicato di nascosto.
+  proposedPrice Decimal? @db.Decimal(12, 2)
+
+  matchScore Decimal  @default(0) @db.Decimal(5, 2)
+  /// Quali segnali hanno prodotto il punteggio. Una proposta che non sa
+  /// spiegarsi non è verificabile dall'utente.
+  matchSignals String[]
+
+  status ProposalStatus @default(PENDING)
+
+  // ─── Esito dell'approvazione ──────────────────────────────────────────────
+  // "L'evidenza vince sulla previsione": se il cron aveva già scritto il
+  // pagamento di quel ciclo, approvare non ne crea un secondo (che
+  // raddoppierebbe il mese nel flusso di cassa) ma corregge quello esistente.
+  // `resolution` registra quale dei due percorsi è stato seguito.
+  resolution   ProposalResolution?
+  paymentLogId String?             @unique
+  paymentLog   PaymentLog?         @relation(fields: [paymentLogId], references: [id], onDelete: SetNull)
+  resolvedAt   DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, status])
   @@index([subscriptionId])
 }
