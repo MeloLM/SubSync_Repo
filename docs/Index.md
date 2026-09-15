@@ -28,15 +28,15 @@ Cosa fa il prodotto.
 | [[Condivisione_Spese_e_Gruppi]] | Condivisione fra utenti, inviti, ripartizione delle quote, settlement |
 | [[Calcolo_IVA_e_Fisco]] | Deducibilità, IVA, categorie di spesa. **Incompleto** |
 | [[Lettura_Scontrini_OCR_Gemini]] | Estrazione dati da fattura via Gemini, auto-fill del form |
+| [[Soft_Delete_Abbonamenti]] | Cessazione logica, unico punto del filtro, trend che può scendere. **In produzione** |
 
 ## In progettazione
 
-Aree già disegnate ma non ancora implementate: la nota esiste, il codice no.
+Aree disegnate e non ancora attive.
 
-| Area | Copre | Priorità |
-| ---- | ----- | -------- |
-| [[Soft_Delete_Abbonamenti]] | Campo `canceledAt`, filtri delle query, trend che può finalmente scendere | 🔴 prossimo |
-| [[Email_Ingestion_e_Matching]] | Webhook, parsing, matching, aggiornamento automatico di prezzo e rinnovo | 🟡 a seguire |
+| Area | Copre | Stato |
+| ---- | ----- | ----- |
+| [[Email_Ingestion_e_Matching]] | Webhook, parsing, matching a punteggio, proposte da approvare | Modello chiuso e schema scritto; migrazione e webhook da fare |
 
 ## Interfaccia e distribuzione
 

@@ -1,6 +1,5 @@
 import type {
   Subscription,
-  PaymentLog,
   BillingCycle,
   ExpenseNature,
   VatRegime,
@@ -36,13 +35,6 @@ export interface SubscriptionDTO {
   vatDeductiblePct: string; // Prisma.Decimal → stringa
   documentType: FiscalDocumentType;
   supplierVatId: string | null;
-}
-
-export interface PaymentLogDTO {
-  id: string;
-  subscriptionId: string;
-  amount: string; // Prisma.Decimal → stringa
-  paidAt: string; // ISO 8601 (UTC)
 }
 
 export interface BurnRateDTO {
@@ -115,14 +107,5 @@ export function toSubscriptionDTO(s: Subscription): SubscriptionDTO {
     vatDeductiblePct: s.vatDeductiblePct.toFixed(2),
     documentType: s.documentType,
     supplierVatId: s.supplierVatId,
-  };
-}
-
-export function toPaymentLogDTO(p: PaymentLog): PaymentLogDTO {
-  return {
-    id: p.id,
-    subscriptionId: p.subscriptionId,
-    amount: p.amount.toFixed(2),
-    paidAt: p.paidAt.toISOString(),
   };
 }

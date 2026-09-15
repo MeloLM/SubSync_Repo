@@ -39,8 +39,8 @@ riscritto._
 - [x] Trend di spesa: **nessun filtro**, appartenenza al mese estesa a intervallo via `wasActiveInPeriod`
 - [x] Test: 5 sul trend con cessazione + 10 su `subscription-status` (35 test totali verdi)
 - [x] `deleteSubscription` → `cancelSubscription`; componente rinominato `cancel-subscription-button`, dialog riformulato → [[Interfaccia_Grafica_Dashboard]]
-- [ ] ⚠️ **UI di riattivazione**: `reactivateSubscription` esiste ma nessuna schermata la invoca — un abbonamento disattivato non è più raggiungibile → [[Interfaccia_Grafica_Dashboard]]
 - [x] ♻️ `revalidatePath` su disattivazione e riattivazione (Regola 3)
+- [ ] UI di riattivazione — _spostata nel **Backlog consolidato**_ → [[Interfaccia_Grafica_Dashboard]]
 - [ ] Decisione di prodotto: se servi anche una cancellazione definitiva per i record inseriti per errore
 
 ### 2️⃣ Grafico dinamico e proiezione di cassa 🔴 → [[Gestione_Pagamenti_e_Rinnovi]]
@@ -310,6 +310,14 @@ _Il motore di calcolo è scritto e corretto, ma non è importato da nessun file:
 - [ ] Strategia di cache per le viste read-only del Burn Rate — le viste autenticate sono dinamiche, va deciso cosa è lecito conservare sul dispositivo → [[Burn Rate Offline Cache]]
 - [ ] Lighthouse PWA 90+ su build di produzione → [[Lighthouse Audit]]
 - [ ] Startup image iOS dedicate
+
+### 🔁 Abbonamenti cessati 🟠 _(da Sprint 8)_
+
+_Debito tecnico con una faccia rivolta all'utente: il soft-delete ha introdotto uno
+stato da cui l'interfaccia non sa uscire._
+
+- [ ] ⚠️ **UI di riattivazione per abbonamenti soft-deleted** — `reactivateSubscription` è scritta, corretta e **non invocata da nessuna schermata**: un abbonamento disdetto sparisce dalla lista e l'utente non ha modo di riportarlo indietro. Il dato non è perso, ma lui non lo sa. Serve una vista dei cessati o un filtro sulla lista esistente → [[Interfaccia_Grafica_Dashboard]], [[Soft_Delete_Abbonamenti]]
+- [ ] Modificare un abbonamento cessato è ancora possibile conoscendone l'URL: `getSubscription` non applica `isActive`. Non è un buco di sicurezza (la `where` include `userId`), ma è uno stato incoerente da decidere
 
 ### 👤 Profilo e account 🟡 _(da Sprint 8)_
 

@@ -25,12 +25,12 @@ Un'unica fonte di verità sul tuo Burn Rate, sul desktop e in tasca.
 | | Feature | Descrizione |
 | --- | --- | --- |
 | 🔥 | **Monthly Burn Rate** | Spesa ricorrente normalizzata a costo mensile, aggregata server-side. |
-| 💳 | **Gestione Abbonamenti** | CRUD completo: servizio, importo, valuta, ciclo, prossimo rinnovo. |
+| 💳 | **Gestione Abbonamenti** | CRUD completo: servizio, importo, valuta, ciclo, prossimo rinnovo. La disdetta è **logica**: lo storico resta intatto. |
 | 🧾 | **Storico Pagamenti** | Timeline cronologica delle uscite di cassa per abbonamento. |
 | 📲 | **PWA & Offline** | Installabile su iOS/Android, service worker con fallback offline. |
 | 👁️ | **Scanner IA Ricevute** | Estrazione automatica dei dati da foto di fattura via Google Gemini. |
-| 📈 | **Trend di Spesa** | Andamento a 6 mesi del costo normalizzato, coerente col Burn Rate. |
-| 📥 | **Email Ingestion** | Aggiornamento automatico di prezzi e rinnovi da ricevute email _(in progettazione)_. |
+| 📈 | **Spesa media e Addebiti reali** | Due metriche, tre finestre (30 giorni, 6 mesi, 1 anno) e proiezione dei rinnovi futuri. Le barre si selezionano per sommarle. |
+| 📥 | **Email Ingestion** | Aggiornamento automatico di prezzi e rinnovi da ricevute email _(modello e schema pronti, webhook da fare)_. |
 | ⏰ | **Rinnovi Automatici** | Cron job giornaliero che avanza le date di rinnovo e logga i pagamenti. |
 | 🤝 | **Split-Billing** | Condivisione spese fra utenti: inviti, quote in Decimal, settlement. |
 | 🧾 | **Fiscalità** | Deducibilità e IVA per Partita IVA _(motore pronto, UI in backlog)_. |
@@ -45,7 +45,7 @@ Un'unica fonte di verità sul tuo Burn Rate, sul desktop e in tasca.
 - **Supabase** (Auth SSR via `@supabase/ssr`)
 - **Tailwind CSS** · **Lucide React** (icone) · **Recharts** (grafici)
 - **Google Gemini** (`@google/genai`) per lo scanner ricevute
-- **Vitest** (unit test sugli helper monetari e di data)
+- **Vitest** — 73 test sugli helper puri: denaro, date, stato degli abbonamenti, spesa media e flusso di cassa
 - **Vercel** (hosting, cron job) — app live in produzione
 - **pnpm** (package manager)
 
