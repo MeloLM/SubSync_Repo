@@ -124,7 +124,11 @@ export async function updateDisplayName(formData: FormData): Promise<AuthResult>
     return { error: NOT_CONFIGURED };
   }
 
-  revalidatePath("/profile"); // Regola 3
+  // Regola 3. `"layout"` e non il default `"page"`: il nome compare anche nella
+  // barra laterale, che vive nel layout della dashboard. Invalidare la sola
+  // pagina aggiornava l'intestazione del profilo e lasciava la barra col nome
+  // vecchio fino a un ricaricamento completo.
+  revalidatePath("/", "layout");
   return { ok: true };
 }
 

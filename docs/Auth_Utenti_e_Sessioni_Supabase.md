@@ -104,12 +104,29 @@ sull'email — e svuotare il campo è una richiesta legittima di rimuoverlo.
 La scrittura passa da una Server Action, non dal client browser, pur usando la
 stessa API `auth.updateUser`. Due ragioni: tutte le mutazioni del progetto passano
 dalle Server Action, e la Regola 3 impone `revalidatePath` su ogni mutazione, che
-esiste solo lato server. Senza, l'intestazione del profilo continuerebbe a mostrare
-il nome vecchio fino a un ricaricamento completo.
+esiste solo lato server. Senza, l'interfaccia continuerebbe a mostrare il nome
+vecchio fino a un ricaricamento completo.
 
-⚠️ La barra laterale mostra ancora l'email, non il nome: vive nel layout della
-dashboard e `revalidatePath("/profile")` non la tocca. Allinearla richiede
-invalidare il layout, non solo la pagina. Vedi [[Interfaccia_Grafica_Dashboard]].
+### Dove compare, e cosa comporta invalidare
+
+Il nome si legge in due posti: l'intestazione della pagina profilo e il blocco
+utente della barra laterale. La barra vive nel **layout** della dashboard, non
+nella pagina, quindi l'invalidazione è `revalidatePath("/", "layout")` e non la
+forma predefinita su `"page"`: invalidare la sola pagina aggiornava l'intestazione
+e lasciava la barra col nome vecchio.
+
+È un martello volutamente largo — invalida l'albero sotto il layout radice — ma la
+frequenza dell'evento lo giustifica: un utente cambia nome una volta, non a ogni
+sessione. Vedi [[Interfaccia_Grafica_Dashboard]].
+
+⚠️ Invalidare la cache non basta da solo, ed è un errore facile da fare: il layout
+passava alla barra l'email, quindi ri-renderizzarlo avrebbe prodotto esattamente lo
+stesso markup. La cache e ciò che il componente legge sono due problemi distinti, e
+risolverne uno solo non produce nessun effetto visibile.
+
+La normalizzazione di `full_name` sta in **un unico punto** (`lib/auth.ts`), letto
+sia dalla pagina sia dal layout: due normalizzazioni divergenti mostrerebbero due
+nomi diversi nella stessa schermata.
 
 ---
 

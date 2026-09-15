@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 
-import { getCurrentUser } from "@/lib/auth";
+import { fullNameOf, getCurrentUser } from "@/lib/auth";
 import { countPendingInvites } from "@/actions/split.actions";
 import { SidebarContent } from "@/components/dashboard/sidebar-content";
 import { MobileNav } from "@/components/dashboard/mobile-nav";
@@ -13,7 +13,11 @@ export default async function DashboardLayout({
 }) {
   const user = await getCurrentUser();
   const email = user.email ?? "utente";
-  const initial = email.charAt(0).toUpperCase();
+  const fullName = fullNameOf(user);
+  // Chi ha impostato un nome si aspetta di vederlo dove prima c'era l'email.
+  const displayName = fullName || email;
+  const subtitle = fullName ? email : "Profilo e impostazioni";
+  const initial = displayName.charAt(0).toUpperCase();
   const pendingInvites = await countPendingInvites();
 
   return (
@@ -21,7 +25,8 @@ export default async function DashboardLayout({
       {/* Sidebar laterale — SOLO desktop (`lg:`); sotto `lg` è del tutto assente */}
       <aside className="sticky top-0 hidden h-screen shrink-0 border-r border-zinc-800 bg-subsync-card p-4 lg:flex lg:w-60 lg:flex-col">
         <SidebarContent
-          email={email}
+          displayName={displayName}
+          subtitle={subtitle}
           initial={initial}
           pendingInvites={pendingInvites}
         />
@@ -46,7 +51,8 @@ export default async function DashboardLayout({
           </Link>
           <MobileNav>
             <SidebarContent
-              email={email}
+              displayName={displayName}
+              subtitle={subtitle}
               initial={initial}
               pendingInvites={pendingInvites}
               showLogo={false}

@@ -23,12 +23,16 @@ const navItems = [
  * profilo (`mt-auto`) resti ancorato in fondo in entrambi i contesti.
  */
 export function SidebarContent({
-  email,
+  displayName,
+  subtitle,
   initial,
   pendingInvites,
   showLogo = true,
 }: {
-  email: string;
+  /** Nome scelto dall'utente, o la sua email se non ne ha impostato uno. */
+  displayName: string;
+  /** Riga secondaria: l'email quando c'è un nome, altrimenti l'affordance. */
+  subtitle: string;
   initial: string;
   pendingInvites: number;
   /** Nasconde il logo quando è già mostrato altrove (es. header mobile). */
@@ -80,11 +84,9 @@ export function SidebarContent({
         </span>
         <span className="min-w-0">
           <span className="block truncate text-sm font-medium text-zinc-100">
-            {email}
+            {displayName}
           </span>
-          <span className="block truncate text-xs text-zinc-400">
-            Profilo e impostazioni
-          </span>
+          <span className="block truncate text-xs text-zinc-400">{subtitle}</span>
         </span>
       </Link>
     </>

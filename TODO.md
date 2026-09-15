@@ -78,7 +78,7 @@ progettarla ha fatto emergere._
 - [x] **Profilo**: form del nome visualizzato su `user_metadata.full_name`, via Server Action con `revalidatePath` (Regola 3) e toast Sonner → [[Auth_Utenti_e_Sessioni_Supabase]]
 - [x] **Regola 8** istituzionalizzata in `AI_law_subsync.md`: report di esecuzione obbligatorio a ogni prompt strutturato
 - [ ] Collaudo in browser del banner PWA: serve una build di produzione in HTTPS, `beforeinstallprompt` non si attiva in sviluppo
-- [ ] La **barra laterale mostra l'email, non il nome**: vive nel layout e `revalidatePath("/profile")` non la tocca → [[Interfaccia_Grafica_Dashboard]]
+- [x] La **barra laterale mostra il nome**: invalidazione portata a `revalidatePath("/", "layout")` **e** layout aggiornato per leggere `full_name`, perché la cache da sola ri-renderizzava lo stesso markup → [[Auth_Utenti_e_Sessioni_Supabase]]
 
 ### 3️⃣ Email Ingestion & Payment Matcher 🟡 → [[Email_Ingestion_e_Matching]]
 

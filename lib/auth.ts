@@ -1,4 +1,5 @@
 import { cache } from "react";
+import type { User } from "@supabase/supabase-js";
 
 import { createClient } from "@/lib/supabase/server";
 
@@ -29,4 +30,18 @@ export const getCurrentUser = cache(async () => {
 /** Id dell'utente Supabase corrente (UUID), usato come `userId` sui record. */
 export async function getCurrentUserId(): Promise<string> {
   return (await getCurrentUser()).id;
+}
+
+/**
+ * Nome visualizzato dell'utente, o stringa vuota se non l'ha impostato.
+ *
+ * Vive nei `user_metadata` di Supabase, che sono JSON libero: il valore può
+ * mancare, essere vuoto o non essere affatto una stringa. Va normalizzato a ogni
+ * lettura, e questo è l'unico punto in cui farlo — lo leggono sia la pagina
+ * profilo sia il layout della dashboard, e due normalizzazioni divergenti
+ * mostrerebbero due nomi diversi nella stessa schermata.
+ */
+export function fullNameOf(user: User): string {
+  const raw = user.user_metadata?.full_name;
+  return typeof raw === "string" ? raw.trim() : "";
 }
