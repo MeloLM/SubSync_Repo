@@ -1,4 +1,4 @@
-import { Lock, LogOut, Trash2, AlertTriangle } from "lucide-react";
+import { Lock, LogOut, Trash2, AlertTriangle, FlaskConical } from "lucide-react";
 
 import { fullNameOf, getCurrentUser } from "@/lib/auth";
 import { signOut } from "@/actions/auth.actions";
@@ -33,6 +33,17 @@ function ReadOnlyField({
 }
 
 export default async function ProfilePage() {
+  // Import condizionale e non statico, ed è una differenza misurabile: con
+  // `import` in cima al file il componente finisce nel chunk client di
+  // PRODUZIONE anche se il ramo che lo renderizza è sempre falso — verificato
+  // trovando la stringa del pulsante dentro `.next/static`. Il guard su
+  // `NODE_ENV` impedisce il rendering, non il bundling. Dentro un ramo che il
+  // bundler sa già falso, invece, l'`import()` viene eliminato con il ramo.
+  const SeedButton =
+    process.env.NODE_ENV === "development"
+      ? (await import("@/components/dev/seed-button")).SeedButton
+      : null;
+
   const user = await getCurrentUser();
   const email = user.email ?? "—";
   const memberSince = user.created_at
@@ -151,6 +162,19 @@ export default async function ProfilePage() {
           </button>
         </div>
       </section>
+
+      {/* Strumenti di sviluppo. Vedi l'import condizionale in cima al file. */}
+      {SeedButton ? (
+        <section className="rounded-2xl border border-dashed border-amber-500/30 bg-amber-500/5 p-6">
+          <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-amber-400">
+            <FlaskConical className="h-4 w-4" /> Strumenti di sviluppo
+          </h2>
+          <p className="mb-4 mt-1 text-xs text-zinc-500">
+            Visibile solo in locale. Non entra nella build di produzione.
+          </p>
+          <SeedButton />
+        </section>
+      ) : null}
     </div>
   );
 }

@@ -311,6 +311,21 @@ _Il motore di calcolo è scritto e corretto, ma non è importato da nessun file:
 - [ ] Lighthouse PWA 90+ su build di produzione → [[Lighthouse Audit]]
 - [ ] Startup image iOS dedicate
 
+### 👤 Profilo e account 🟡 _(da Sprint 8)_
+
+_Il profilo ha smesso di essere una vetrina di sola lettura con il nome
+modificabile. Restano due evoluzioni con conseguenze fuori dalla pagina._
+
+- [ ] **Selettore della valuta principale** — oggi il `<select>` nel profilo è decorativo: mostra EUR e USD, non salva niente e nessuno lo legge. Diventa reale solo insieme alla conversione, altrimenti sposta il problema invece di risolverlo: un utente che sceglie USD vedrebbe la stessa somma di valute miste con un altro simbolo davanti → [[Currency Normalizer]], [[Gestione_Pagamenti_e_Rinnovi]]
+- [ ] **Dashboard "Pagamenti mancati o scaduti"** — abbonamenti con `nextRenewalDate` passata e nessun `PaymentLog` per quel ciclo: o il cron non è passato, o il pagamento è fallito davvero. Oggi la differenza fra i due casi è invisibile, e il secondo è quello che costa all'utente → [[Gestione_Pagamenti_e_Rinnovi]]
+  - ⚠️ Si incrocia con l'ingestione email: una ricevuta che non arriva è essa stessa un segnale di pagamento mancato → [[Email_Ingestion_e_Matching]]
+- [ ] Preferenza di fuso orario: resta bloccata su UTC per vincolo architetturale, ma la spiegazione nell'interfaccia va resa meno tecnica
+
+### 🧪 Strumenti di sviluppo
+
+- [x] **Seed di dati finti** per il collaudo visivo: 13 abbonamenti costruiti per popolare ogni vista del grafico, con storico, un disdetto e un aumento di prezzo
+- [ ] ⚠️ **In locale si lavora sul database di produzione**: `.env.local` punta `DATABASE_URL` al pooler Supabase, quindi `NODE_ENV === "development"` è vero mentre si è collegati ai dati veri. Il seed se ne difende con un secondo cancello; va valutato se istituzionalizzare l'avvertenza in `AI_law_subsync.md`
+
 ---
 
 ## 📖 Legenda
