@@ -26,7 +26,7 @@ export async function createClient() {
             );
           } catch {
             // Invocato da una Server Component: ignorabile se il refresh
-            // della sessione è gestito dal middleware.
+            // della sessione è gestito dal proxy.
           }
         },
       },

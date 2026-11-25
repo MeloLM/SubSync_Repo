@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
  * avanza `nextRenewalDate` finché torna nel futuro (idempotente).
  *
  * Protetto da `CRON_SECRET` (header `Authorization: Bearer <secret>`, inviato
- * automaticamente da Vercel Cron). Sotto `app/api`, quindi escluso dal middleware.
+ * automaticamente da Vercel Cron). Sotto `app/api`, quindi escluso dal proxy.
  */
 function isAuthorized(request: Request): boolean {
   const secret = process.env.CRON_SECRET;

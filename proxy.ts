@@ -2,16 +2,17 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
 /**
- * 🔐 Middleware di protezione (Sprint 2).
+ * 🔐 Proxy di protezione (Sprint 2; ex middleware, rinominato in Next 16).
  * Protegge l'intero route group `app/(dashboard)`: senza una sessione Supabase
  * valida, forza il redirect su `/login`. Rinfresca anche i cookie di sessione
- * propagandoli sulla response (pattern @supabase/ssr per il middleware).
+ * propagandoli sulla response (pattern @supabase/ssr per il proxy).
  *
- * Nota: il middleware gira nell'Edge runtime, quindi crea il proprio client
- * con l'API request/response cookies; le Server Actions usano invece il client
+ * Nota: dal passaggio a Next 16 il proxy gira nel runtime Node.js (prima, come
+ * middleware, era Edge). Crea comunque il proprio client con l'API
+ * request/response cookies; le Server Actions usano invece il client
  * server-side dello Sprint 1 (`lib/supabase/server.ts`).
  */
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -57,7 +58,7 @@ function redirectToLogin(request: NextRequest) {
 }
 
 /**
- * Esegue il middleware su tutto tranne: asset statici di Next, favicon,
+ * Esegue il proxy su tutto tranne: asset statici di Next, favicon,
  * la pagina `/login`, le route `/auth/*` e `/api/*`, le pagine legali pubbliche
  * `/privacy` e `/terms`, e i file con estensione.
  * Restano protette: `/`, `/subscriptions`, `/payments`, `/profile`, `/invite`.
