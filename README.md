@@ -1,7 +1,7 @@
 # SubSync
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js)](https://nextjs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![PWA](https://img.shields.io/badge/PWA-ready-5A0FC8?logo=pwa&logoColor=white)](#)
 
@@ -40,7 +40,8 @@ Un'unica fonte di verità sul tuo Burn Rate, sul desktop e in tasca.
 
 ## 🧱 Stack tecnologico
 
-- **Next.js 14** (App Router) · **TypeScript**
+- **Next.js 16** (App Router, Turbopack) · **React 19** · **TypeScript**
+- **ESLint 9** (flat config) — il lint è `eslint .`, non più `next lint`
 - **Prisma ORM** · **PostgreSQL** (via Docker)
 - **Supabase** (Auth SSR via `@supabase/ssr`)
 - **Tailwind CSS** · **Lucide React** (icone) · **Recharts** (grafici)
@@ -74,8 +75,8 @@ L'applicazione sarà disponibile su [http://localhost:3000](http://localhost:300
 
 ### Prerequisiti
 
-- **Node.js** >= 18.17 (consigliata l'ultima LTS)
-- **pnpm** >= 9 (`npm i -g pnpm`)
+- **Node.js 24 LTS** (`engines` richiede `24.x`; con altre versioni pnpm avvisa soltanto)
+- **pnpm** 11 (`packageManager` in `package.json`; `npm i -g pnpm`)
 - **Docker** + Docker Compose (per il database PostgreSQL)
 
 ---
@@ -94,8 +95,8 @@ documentazione) è in **[ARCHITECTURE.md](ARCHITECTURE.md)**, e le note di
 dominio in **[docs/](docs/)**, navigabili come grafo con Obsidian.
 
 La roadmap di prodotto è in **[TODO.md](TODO.md)**: gli Sprint 1-7 sono chiusi,
-lo **Sprint 8** in corso porta la cessazione logica degli abbonamenti e
-l'ingestione email.
+lo **Sprint 8** in corso porta la cessazione logica degli abbonamenti,
+l'ingestione email e l'upgrade a Next 16 / React 19.
 
 ---
 
@@ -108,6 +109,8 @@ l'ingestione email.
 | `pnpm install`                   | Installa le dipendenze                             |
 | `pnpm dev`                       | Avvia il server di sviluppo (hot reload)           |
 | `pnpm build` / `pnpm start`      | Build ed esecuzione in produzione                  |
+| `pnpm run lint`                  | Lint dell'intero progetto (`eslint .`, ESLint 9)   |
+| `pnpm test`                      | Test unitari (Vitest)                              |
 | `pnpm dlx prisma migrate dev`    | Crea e applica una migrazione in sviluppo          |
 | `pnpm dlx prisma studio`         | GUI di ispezione del database                      |
 | `pnpm dlx prisma generate`       | Rigenera il Prisma Client                          |

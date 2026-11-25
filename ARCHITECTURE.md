@@ -91,7 +91,7 @@ subsync/
 │
 ├── public/                             # Asset statici + PWA (icone, sw.js, offline.html)
 │
-├── middleware.ts                        # Protezione rotte (redirect a /login se non auth)
+├── proxy.ts                             # Protezione rotte (redirect a /login se non auth), runtime Node
 ├── vercel.json                          # Schedulazione Vercel Cron (rinnovi)
 ├── docker-compose.yml                   # Servizio PostgreSQL (sviluppo locale)
 ├── next.config.mjs

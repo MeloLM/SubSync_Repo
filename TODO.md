@@ -80,6 +80,24 @@ progettarla ha fatto emergere._
 - [ ] Collaudo in browser del banner PWA: serve una build di produzione in HTTPS, `beforeinstallprompt` non si attiva in sviluppo
 - [x] La **barra laterale mostra il nome**: invalidazione portata a `revalidatePath("/", "layout")` **e** layout aggiornato per leggere `full_name`, perché la cache da sola ri-renderizzava lo stesso markup → [[Auth_Utenti_e_Sessioni_Supabase]]
 
+### 🔧 Upgrade a Next 16 e React 19 🔴 `[branch chore/upgrade-next-16]` → [[Motore_Regole_NextJS]]
+
+_Aggiornamento del framework fatto fuori sequenza, su branch dedicato, prima di
+costruire altro sopra Next 14._
+
+- [x] Dipendenze: Next 16.4.6, React e React DOM 19.3.1, ESLint 9, `@types/node` 24, `engines.node` 24.x; Prisma resta alla 5 e TypeScript alla 5.x
+- [x] API di richiesta asincrone: `cookies()`, `headers()`, `params` attesi con `await`; `createClient` di Supabase diventa `async`
+- [x] `middleware.ts` → `proxy.ts`, runtime da Edge a Node.js → [[Auth_Utenti_e_Sessioni_Supabase]]
+- [x] Lint: flat config ESLint 9 con `eslint-config-next` 16, script `eslint .` al posto di `next lint`
+- [x] `tsconfig.json` aggiornato da Next (`jsx: react-jsx`)
+- [x] UI: tre correzioni `react-hooks/set-state-in-effect` (menu mobile, `/invite`, banner PWA), regola non disattivata; librerie UI compatibili con React 19 senza aggiornamenti → [[Interfaccia_Grafica_Dashboard]]
+- [x] Validazione da zero: `tsc --noEmit` pulito, `eslint .` pulito, 290 test su 290, `next build` OK; nessuna occorrenza del pulsante dati di test nei chunk di produzione
+- [ ] 🔴 **Collaudo manuale** (login, Google, proxy, abbonamenti, scanner, grafico, split, PWA, cron, `React.cache`): lo esegue l'utente su Node 24, a mano
+- [ ] 🔴 Apertura della PR verso `main` (squash) e unione, dopo il collaudo
+- [ ] Passare l'ambiente locale a **Node 24**: la macchina ha Node 25, e pnpm avvisa che `engines` chiede 24.x
+- [ ] Due warning Turbopack sul tracing del client Prisma generato: valutare `/*turbopackIgnore: true*/` o un'altra mitigazione, solo se pesano sul deploy
+- [ ] Confronto dimensioni con Next 14 solo indicativo (webpack contro Turbopack): rimisurare con un'unica metodologia dopo il deploy su Vercel
+
 ### 3️⃣ Email Ingestion & Payment Matcher 🟡 → [[Email_Ingestion_e_Matching]]
 
 _La killer feature: le ricevute arrivano già per email a ogni rinnovo.
