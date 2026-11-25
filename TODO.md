@@ -2,7 +2,7 @@
 
 | Metadato         | Valore |
 | ---------------- | ------ |
-| **Last Updated** | 2026-09-15 |
+| **Last Updated** | 2026-11-25 |
 | **Sprint attivo** | 🔴 **SPRINT 8 — Integrità dello Storico & Aggiornamento Automatico** |
 | **Status**       | App **LIVE e stabile su Vercel**. Sprint 1, 2, 6 e 7 completati. Sprint 3, 4 e 5 chiusi sul consegnato, con i residui spostati nel **Backlog consolidato** in fondo. Il focus passa dall'interfaccia ai dati: prima la cessazione logica degli abbonamenti (senza cui lo storico del trend è inattendibile), poi l'ingestione email che tiene prezzi e rinnovi aggiornati da soli. |
 | **Goal**         | Tracciare gli abbonamenti e calcolare il **Monthly Burn Rate** normalizzato, con importi monetari accurati (Decimal) e date timezone-safe (00:00:00 UTC). |
@@ -94,7 +94,7 @@ giorno dell'inserimento._
 - [ ] 🔐 Endpoint **webhook** di ricezione, autenticato con segreto condiviso e con limite di payload
 - [ ] 🔐 Generazione, rotazione e rate limit del token di ricezione su `User` → [[Auth_Utenti_e_Sessioni_Supabase]]
 - [x] **Schema Prisma**: `InboundEmail`, `PaymentProposal`, `inboundToken` su `User`, `source` su `PaymentLog` e cinque nuovi enum. `prisma validate` e `generate` verdi → [[Database_Tabelle_e_Modelli_Prisma]]
-- [ ] ⚠️ **Migrazione non generata**: richiede `DIRECT_URL`, non disponibile in locale per scelta. Passo di rilascio consapevole, da eseguire contro Supabase
+- [x] ⚠️ **Migrazione** `20261125100000_email_ingestion_schema` generata (solo additiva) e **applicata su Supabase** il 2026-11-25 alle 16:09 UTC con `migrate deploy`: `migrate status` 5/5, verifica su `information_schema` superata (3 colonne, 2 tabelle, 5 enum) → [[Database_Tabelle_e_Modelli_Prisma]]
 - [ ] 🔐 Scelta del provider inbound — **raccomandato Postmark** (JSON nativo, `MailboxHash`, `Headers` completo): da approvare e verificare sul campo
 - [ ] ⚠️ **Identità dal destinatario di busta, non da `To`**: l'inoltro automatico conserva il destinatario originale, quindi il token non compare in `To`. Vincolo sulla scelta del provider, non un dettaglio
 - [ ] Indirizzi nella forma `receipts+<token>@in.subsync.app` per allinearsi a `MailboxHash`, se si conferma Postmark
@@ -336,12 +336,13 @@ Restano fuori i punti d'ingresso che non sono quelle mutazioni._
 
 - [x] Schemi zod per abbonamenti e split: nome, importo, valuta EUR/USD, ciclo, data di rinnovo non nel passato, percentuali fiscali 0–100, email normalizzata, quota 0–100 → [[Gestione_Pagamenti_e_Rinnovi]], [[Condivisione_Spese_e_Gruppi]]
 - [x] Appartenenza della categoria controllata nell'action (propria o di sistema)
-- [ ] **Dati già salvati**: la validazione protegge l'ingresso, non ripulisce l'esistente. Una `nextRenewalDate` remota o una valuta malformata già nel database restano; serve una verifica una tantum, da fare con consapevolezza perché tocca dati reali
+- [x] **Dati già salvati**: verifica in sola lettura del 2026-11-25 — nessun abbonamento attivo con `nextRenewalDate` anteriore al 2026-09-15 e nessuna valuta diversa da EUR/USD (5 abbonamenti in tutto). **Nessuna pulizia dei dati anomali**: il database attuale è una sandbox
 - [ ] Validare l'**output di Gemini** dello scanner con gli stessi schemi, invece di affidarsi al solo ritaglio lato form → [[Lettura_Scontrini_OCR_Gemini]]
 - [ ] Il **cron dei rinnovi** recupera i cicli arretrati con un tetto tecnico di 600 iterazioni per abbonamento, che è un salvagente e non una politica: per un mensile sono cinquant'anni di `PaymentLog`. Gli schemi chiudono l'ingresso; cosa fare di un arretrato già presente nei dati va deciso → [[Gestione_Pagamenti_e_Rinnovi]]
 - [ ] Limitare la frequenza delle mutazioni (rate limiting): oggi un utente autenticato può invitare o creare senza tetto
 - [x] 🔐 Scanner Gemini: **sessione obbligatoria** (senza utente `{ ok: false }` «Sessione scaduta», prima di qualsiasi chiamata a pagamento) e payload validato — solo JPEG/PNG/WebP, max 3 MB decodificati (coerente con `bodySizeLimit` 4mb), base64 ben formato, firma dei byte coerente con il tipo → [[Lettura_Scontrini_OCR_Gemini]]
-- [ ] 🔐 **Rate limit dello scanner** (e delle altre action a costo): non implementato, con la sessione obbligatoria resta il tetto di spesa mancante. Due strade — servizio esterno (es. Upstash Redis con sliding window, a basso costo e basso attrito su Vercel, ma una dipendenza e un servizio in più) oppure tabella su database (nessun servizio nuovo e contatori ispezionabili, ma una migrazione e una scrittura per chiamata sul database di produzione) — la scelta è dell'utente → [[Lettura_Scontrini_OCR_Gemini]]
+- [ ] 🔐 **Rate limit dello scanner** (e delle altre action a costo): non implementato, con la sessione obbligatoria resta il tetto di spesa mancante. **Decisione dell'utente: tabella su Supabase, niente Upstash** (nessun servizio nuovo, contatori ispezionabili). La tabella entra nella **prossima migrazione già prevista** (`startedAt` / `anchorDay`), non in una migrazione dedicata. ⚠️ Prerequisito, da fare prima: la **conferma email alla registrazione**, altrimenti il limite per utente si aggira creando account → [[Lettura_Scontrini_OCR_Gemini]], [[Auth_Utenti_e_Sessioni_Supabase]]
+- [ ] 🟢 **Dropzone dello scanner, testo di aiuto**: correggere «PNG o JPG» in «PNG, JPG o WebP» (`components/forms/image-scanner.tsx`), perché il server accetta anche WebP. **Il limite di 15 MB non si tocca**: vale per il file originale, mentre il client ridimensiona a 1400 px in JPEG con qualità 0,7, molto sotto i 3 MB del server. Bassa priorità → [[Lettura_Scontrini_OCR_Gemini]]
 
 ### 🧪 Strumenti di sviluppo
 

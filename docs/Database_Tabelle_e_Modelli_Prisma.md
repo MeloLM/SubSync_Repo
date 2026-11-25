@@ -135,13 +135,18 @@ e per l'ingestione email `InboundStatus`, `DedupeSource`, `ProposalStatus`,
 
 ### Migrazioni
 Stati successivi dello schema: impianto iniziale, split billing, impianto fiscale,
-cessazione logica (`canceledAt`).
+cessazione logica (`canceledAt`), schema dell'ingestione email
+(`20261125100000_email_ingestion_schema`).
 
-⚠️ **L'ingestione email non è ancora migrata.** I modelli sono nello schema e lo
-schema è valido, ma la migrazione va generata contro il database reale: richiede
-`DIRECT_URL`, che in locale non è disponibile per scelta (vedi i vincoli
-d'ambiente in `AI_law_subsync.md`). È un passo di rilascio consapevole, non
-automatico — `vercel.json` esclude `migrate deploy` dal build.
+L'ingestione email è **migrata e applicata su Supabase** (25 novembre 2026, ore
+16:09 UTC, con `migrate deploy`): cinque migrazioni su cinque, `migrate status`
+allineato. La migrazione è solo additiva — 5 enum, le tabelle `InboundEmail` e
+`PaymentProposal`, la colonna `PaymentLog.source` (default `CRON`) e i due campi
+`inboundToken` e `inboundTokenRotatedAt` su `User`. Prima di quel passo il database
+era in ritardo sullo schema e le query che toccavano i nuovi campi fallivano con
+`P2022`, cron dei rinnovi compreso. Resta valido il vincolo di processo:
+`vercel.json` esclude `migrate deploy` dal build, quindi ogni migrazione futura è un
+passo di rilascio consapevole, da eseguire a mano con `DIRECT_URL`.
 
 ---
 
@@ -201,8 +206,6 @@ seconda del fuso del browser. Il modulo espone anche l'avanzamento del ciclo,
 usato dal cron.
 
 ### Lavori aperti
-- **Migrazione dell'ingestione email**: i modelli sono nello schema, la migrazione
-  no. Va generata contro il database reale, come passo di rilascio consapevole.
 - **Giorno di ancoraggio del rinnovo**: l'avanzamento satura il giorno all'ultimo
   del mese, e la saturazione è irreversibile perché il giorno originale non è
   memorizzato — un mensile del 31 gennaio, passato per febbraio, resta al 28.

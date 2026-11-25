@@ -298,8 +298,11 @@ giorni: un mensile e un annuale hanno margini di ambiguità molto diversi.
 
 ## Modello dati proposto
 
-⚠️ **Progettato, non applicato.** Nessuna migrazione è stata scritta. Al momento
-dell'implementazione va aggiornato anche [[Database_Tabelle_e_Modelli_Prisma]].
+✅ **Migrazione applicata su Supabase il 25 novembre 2026**
+(`20261125100000_email_ingestion_schema`, solo additiva). Lo schema è quello
+descritto qui sotto; lo stato delle migrazioni è in
+[[Database_Tabelle_e_Modelli_Prisma]]. Il resto dell'ingestione (webhook, parsing,
+matching, schermata di approvazione) resta da implementare.
 
 ```prisma
 // Indirizzo di ricezione dedicato — su User
@@ -450,12 +453,12 @@ non lo espone è inutilizzabile, non scomodo.
 
 ## Cosa resta aperto
 
-I tre nodi di modello sono chiusi e lo schema è scritto. Restano:
+I tre nodi di modello sono chiusi e lo schema è scritto e migrato (applicato su
+Supabase il 25 novembre 2026). Restano:
 
 - **approvazione della scelta del provider** e verifica sul campo dei tre
   requisiti;
 - **configurazione DNS** del dominio di ricezione (MX, SPF, DMARC);
-- **migrazione** dei nuovi modelli, da generare contro il database reale;
 - **taratura della soglia** di punteggio, che si può fare solo su ricevute vere;
 - forma della **schermata di approvazione**, da progettare con
   [[Interfaccia_Grafica_Dashboard]].
