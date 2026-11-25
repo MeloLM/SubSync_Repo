@@ -10,9 +10,10 @@ export const dynamic = "force-dynamic";
 export default async function EditSubscriptionPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const subscription = await getSubscription(params.id);
+  const { id } = await params;
+  const subscription = await getSubscription(id);
   if (!subscription) notFound();
 
   return (

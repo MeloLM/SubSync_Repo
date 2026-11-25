@@ -12,9 +12,10 @@ export const dynamic = "force-dynamic";
 export default async function SplitPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const overview = await getSplitOverview(params.id);
+  const { id } = await params;
+  const overview = await getSplitOverview(id);
   if (!overview) notFound();
 
   const fmt = (v: string) =>

@@ -8,8 +8,8 @@ import { cookies } from "next/headers";
  *
  * Pattern `getAll`/`setAll` come da documentazione aggiornata di @supabase/ssr.
  */
-export function createClient() {
-  const cookieStore = cookies();
+export async function createClient() {
+  const cookieStore = await cookies();
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

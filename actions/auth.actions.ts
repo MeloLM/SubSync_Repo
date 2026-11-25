@@ -26,7 +26,7 @@ export async function signIn(formData: FormData): Promise<AuthResult> {
   }
 
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) return { error: error.message };
     return { ok: true };
@@ -47,7 +47,7 @@ export async function signUp(formData: FormData): Promise<AuthResult> {
   }
 
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { error } = await supabase.auth.signUp({ email, password });
     if (error) return { error: error.message };
     // Conferma email disattivata lato Supabase: signUp imposta già la sessione
@@ -69,8 +69,8 @@ export async function signUp(formData: FormData): Promise<AuthResult> {
 export async function signInWithGoogle(): Promise<AuthResult> {
   let url: string | null = null;
   try {
-    const supabase = createClient();
-    const origin = headers().get("origin") ?? "";
+    const supabase = await createClient();
+    const origin = (await headers()).get("origin") ?? "";
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: `${origin}/auth/callback` },
@@ -115,7 +115,7 @@ export async function updateDisplayName(formData: FormData): Promise<AuthResult>
   }
 
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { error } = await supabase.auth.updateUser({
       data: { full_name: fullName },
     });
@@ -134,7 +134,7 @@ export async function updateDisplayName(formData: FormData): Promise<AuthResult>
 
 export async function signOut(): Promise<void> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     await supabase.auth.signOut();
   } catch {
     // Nessuna sessione/credenziale: procedi comunque al redirect.
