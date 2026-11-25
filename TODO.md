@@ -95,8 +95,8 @@ costruire altro sopra Next 14._
 - [ ] 🔴 **Collaudo manuale** (login, Google, proxy, abbonamenti, scanner, grafico, split, PWA, cron, `React.cache`): lo esegue l'utente su Node 24, a mano
 - [ ] 🔴 Apertura della PR verso `main` (squash) e unione, dopo il collaudo
 - [ ] Passare l'ambiente locale a **Node 24**: la macchina ha Node 25, e pnpm avvisa che `engines` chiede 24.x
-- [ ] Due warning Turbopack sul tracing del client Prisma generato: valutare `/*turbopackIgnore: true*/` o un'altra mitigazione, solo se pesano sul deploy
-- [ ] Confronto dimensioni con Next 14 solo indicativo (webpack contro Turbopack): rimisurare con un'unica metodologia dopo il deploy su Vercel
+- [ ] Due warning Turbopack sul tracing del client Prisma generato: rinviati all'aggiornamento di Prisma 5, vedi il **Backlog consolidato** → «Strumenti di sviluppo»
+- [ ] Confronto dimensioni con Next 14 solo indicativo (webpack contro Turbopack): da rimisurare con Lighthouse mobile su `/login`, vedi il **Backlog consolidato** → «Strumenti di sviluppo»
 
 ### 3️⃣ Email Ingestion & Payment Matcher 🟡 → [[Email_Ingestion_e_Matching]]
 
@@ -366,7 +366,10 @@ Restano fuori i punti d'ingresso che non sono quelle mutazioni._
 
 - [x] **Seed di dati finti** per il collaudo visivo: 13 abbonamenti costruiti per popolare ogni vista del grafico, con storico, un disdetto e un aumento di prezzo
 - [ ] ⚠️ **In locale si lavora sul database di produzione**: `.env.local` punta `DATABASE_URL` al pooler Supabase, quindi `NODE_ENV === "development"` è vero mentre si è collegati ai dati veri. Il seed se ne difende con un secondo cancello; va valutato se istituzionalizzare l'avvertenza in `AI_law_subsync.md`
-- [ ] ⚠️ Prima del lancio: database di produzione separato dalla sandbox e migrazioni tolte dallo script build
+- [ ] ⚠️ Prima del lancio: database di produzione separato dalla sandbox e migrazioni tolte dallo script build _(la seconda metà è coperta dalla voce «PR piccola» qui sotto: si chiude con quella)_
+- [ ] 🟠 **PR piccola dopo il merge dell'upgrade: togliere alla radice il problema di `pnpm build`**, che oggi esegue `migrate deploy`. Non implementare ora. Da fare: (1) script `build` = `prisma generate && next build`; (2) nuovo script per le migrazioni di produzione (per esempio `db:migrate:deploy`), da lanciare solo come passo di rilascio consapevole; (3) allineare `vercel.json`, la CI, la Parte IV e la Parte VI di `AI_law_subsync.md`; (4) chiudere la voce «migrazioni tolte dallo script build» qui sopra → [[Motore_Regole_NextJS]]
+- [ ] 🟡 **Warning Turbopack «tracing of the whole project» sul client Prisma generato** (`lib/generated/prisma/runtime/library.js`, da `/api/cron/renewals` e `/subscriptions`): da affrontare insieme all'aggiornamento di Prisma 5, non prima. Intanto, nel log di build di Vercel, controllare la dimensione delle funzioni → [[Database_Tabelle_e_Modelli_Prisma]]
+- [ ] 🟡 **Rimisurare le dimensioni con lo stesso strumento, prima e dopo l'upgrade**: Lighthouse mobile su `/login`, in produzione (Next 14) e sulla preview (Next 16). Il confronto della fase 3 (webpack contro Turbopack, script ad hoc) resta solo indicativo → [[Lighthouse Audit]]
 
 ### 🔐 Open redirect su `/auth/callback` 🔴 _(da Sprint 8)_
 
