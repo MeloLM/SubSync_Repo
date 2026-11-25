@@ -319,6 +319,13 @@ Fatti del progetto che condizionano ogni esecuzione. Non sono preferenze.
   pooler (porta 5432) per le migrazioni.
 - Nessuno dei due file va committato.
 
+### Runtime e lint
+- Il runtime è **Node 24 LTS**: `package.json` dichiara `engines.node` a `24.x` e la CI
+  usa la stessa versione. Con un Node diverso pnpm avvisa, e i risultati di build e
+  test non fanno fede.
+- Il lint si esegue con **`eslint .`** (script `pnpm lint`, flat config di ESLint 9),
+  non con `next lint`, che Next 16 non offre più.
+
 ### pnpm
 `pnpm-workspace.yaml` contiene un elenco `allowBuilds`. Ogni dipendenza con uno
 script `postinstall` **deve** comparire lì con valore `true`, altrimenti pnpm

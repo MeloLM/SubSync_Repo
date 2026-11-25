@@ -16,7 +16,7 @@ import { createClient } from "@/lib/supabase/server";
  * Server Actions falliscono in modo esplicito anziché scrivere record orfani.
  */
 export const getCurrentUser = cache(async () => {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

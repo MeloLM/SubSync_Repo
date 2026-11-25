@@ -9,12 +9,12 @@ import { safeRedirectPath } from "@/lib/validation/redirect";
  * e lo scambia per una sessione.
  *
  * ⚠️ Fix loop OAuth: i cookie di sessione vengono scritti DIRETTAMENTE sulla
- * response di redirect (pattern request→response, come nel middleware). Usare qui
+ * response di redirect (pattern request→response, come nel proxy). Usare qui
  * il client basato su `next/headers` è inaffidabile: i `Set-Cookie` non si
  * attaccano in modo garantito alla response creata da `NextResponse.redirect`,
  * lasciando l'utente senza sessione → redirect a /login (il loop).
  *
- * Escluso dal middleware (matcher `auth`).
+ * Escluso dal proxy (matcher `auth`).
  */
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);

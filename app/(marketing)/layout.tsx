@@ -4,7 +4,7 @@ import Link from "next/link";
 /**
  * Layout pubblico per le pagine "marketing"/legali (Privacy, Termini).
  * Non richiede autenticazione: le rotte `/privacy` e `/terms` sono escluse dal
- * middleware (necessarie per l'approvazione OAuth di Google e per la PWA).
+ * proxy (necessarie per l'approvazione OAuth di Google e per la PWA).
  */
 export default function MarketingLayout({
   children,

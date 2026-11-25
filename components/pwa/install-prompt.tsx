@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { Download, X } from "lucide-react";
 
 interface BeforeInstallPromptEvent extends Event {
@@ -39,6 +39,11 @@ function isDismissed(): boolean {
   }
 }
 
+// Segnale "sono montato sul client": nessuna sottoscrizione, snapshot diverso per server.
+const subscribeNoop = () => () => {};
+const getTrue = () => true;
+const getFalse = () => false;
+
 /** Registra il rifiuto per i prossimi `DISMISS_DAYS` giorni. */
 function rememberDismissal(): void {
   try {
@@ -68,13 +73,16 @@ function rememberDismissal(): void {
  */
 export function InstallPrompt() {
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
-  const [hidden, setHidden] = useState(false);
-  const [checked, setChecked] = useState(false);
-
-  useEffect(() => {
-    setHidden(isDismissed());
-    setChecked(true);
-  }, []);
+  // Rifiuto scelto in questa sessione (vale subito, anche se lo storage è bloccato).
+  const [dismissedNow, setDismissedNow] = useState(false);
+  // `checked` è false su server e durante l'idratazione, true dopo il mount sul
+  // client: `localStorage` si legge solo da lì, mai nel primo render (niente mismatch).
+  const checked = useSyncExternalStore(subscribeNoop, getTrue, getFalse);
+  const dismissedStored = useMemo(
+    () => (checked ? isDismissed() : false),
+    [checked],
+  );
+  const hidden = dismissedNow || dismissedStored;
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -87,7 +95,7 @@ export function InstallPrompt() {
 
   function dismiss() {
     rememberDismissal();
-    setHidden(true);
+    setDismissedNow(true);
   }
 
   async function install() {

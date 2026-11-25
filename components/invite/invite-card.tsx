@@ -1,9 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
 import { Check, Copy, Share2 } from "lucide-react";
+
+// Valori che non cambiano durante la vita della pagina: nessuna sottoscrizione.
+const subscribeNoop = () => () => {};
+const getOrigin = () => window.location.origin;
+const getEmptyOrigin = () => "";
+const getCanShare = () => typeof navigator.share === "function";
+const getCannotShare = () => false;
 
 /**
  * Card invito: QR (SVG, generato in locale → nessuna richiesta esterna, PWA/CSP-safe)
@@ -11,16 +18,15 @@ import { Check, Copy, Share2 } from "lucide-react";
  * L'URL si legge da `window.location.origin` lato client (post-mount).
  */
 export function InviteCard() {
-  const [url, setUrl] = useState("");
+  // `useSyncExternalStore` con snapshot server vuoti: SSR e prima idratazione
+  // rendono "" / false (nessun mismatch), poi il client legge i valori reali.
+  const url = useSyncExternalStore(subscribeNoop, getOrigin, getEmptyOrigin);
+  const canShare = useSyncExternalStore(
+    subscribeNoop,
+    getCanShare,
+    getCannotShare,
+  );
   const [copied, setCopied] = useState(false);
-  const [canShare, setCanShare] = useState(false);
-
-  useEffect(() => {
-    setUrl(window.location.origin);
-    setCanShare(
-      typeof navigator !== "undefined" && typeof navigator.share === "function",
-    );
-  }, []);
 
   async function handleCopy() {
     if (!url) return;

@@ -27,8 +27,8 @@ dai cookie della richiesta. È il client di gran lunga più usato.
 ### Client browser
 Per i pochi Client Component che devono parlare direttamente con Supabase.
 
-### Client del middleware
-Istanziato per richiesta con un adattatore sui cookie della request.
+### Client del proxy
+Il `proxy.ts` (ex middleware, rinominato in Next 16) istanzia un client per richiesta, con un adattatore sui cookie della request.
 Serve solo a rinfrescare la sessione, non a leggere dati.
 
 ---
@@ -68,10 +68,10 @@ Due meccanismi distinti, spesso confusi:
 
 | Meccanismo | Quando agisce | Cosa fa |
 | ---------- | ------------- | ------- |
-| Middleware | Prima del render, su ogni richiesta | Rinfresca il cookie di sessione e reindirizza a `/login` chi non è autenticato nel gruppo `(dashboard)` |
+| Proxy | Prima del render, su ogni richiesta | Rinfresca il cookie di sessione e reindirizza a `/login` chi non è autenticato nel gruppo `(dashboard)` |
 | Helper di identità | Dentro il render | Risolve l'utente corrente e il suo `userId`, memoizzato per richiesta |
 
-Il middleware decide **se** puoi entrare. L'helper decide **quali dati** sono tuoi.
+Il proxy decide **se** puoi entrare. L'helper decide **quali dati** sono tuoi.
 Il secondo è il punto unico di binding sessione-record: ogni query del progetto
 filtra sullo `userId` che restituisce.
 

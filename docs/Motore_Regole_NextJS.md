@@ -41,7 +41,7 @@ numero di inviti pendenti, poi monta la shell descritta in
 
 ### Rotte di sistema
 Fuori dai gruppi vivono il root layout (metadata, viewport, Toaster globale,
-bootstrap PWA), il manifest e due route handler: il callback di autenticazione
+bootstrap PWA), il manifest, il `proxy.ts` di root (vedi sotto) e due route handler: il callback di autenticazione
 (vedi [[Auth_Utenti_e_Sessioni_Supabase]]) e il cron dei rinnovi (vedi
 [[Gestione_Pagamenti_e_Rinnovi]]).
 
@@ -147,11 +147,69 @@ Ogni livello ha la sua rete di sicurezza:
 
 ---
 
+## Versione: Next 16 e React 19
+
+Il progetto gira su **Next 16** (bundler Turbopack, anche in build), **React 19** e
+**Node 24 LTS**. Cosa è cambiato rispetto a Next 14, in termini di regole del codice.
+
+### API di richiesta asincrone
+`cookies()`, `headers()` e i `params` di pagina sono **Promise**: vanno attesi.
+
+- `createClient()` di `lib/supabase/server.ts` è `async` (fa `await cookies()`) e **ogni
+  chiamante lo attende**; `getCurrentUser` in `lib/auth.ts` resta avvolto in
+  `React.cache`, quindi la deduplica per richiesta è invariata.
+- Le pagine dinamiche `[id]` dichiarano `params: Promise<{ id: string }>` e fanno
+  `await params`.
+- Gli header si leggono con `(await headers()).get(...)`, per esempio l'`origin` del flusso
+  Google in [[Auth_Utenti_e_Sessioni_Supabase]].
+- Una nuova pagina, action o route handler che tocca cookie, header o parametri
+  dinamici deve fare lo stesso: senza `await` il tipo non torna e `tsc` lo segnala.
+
+### `proxy.ts` al posto di `middleware.ts`
+La protezione delle rotte vive in `proxy.ts` alla radice: stessa logica del vecchio
+middleware (stesso matcher, stesso refresh dei cookie, stesso redirect a `/login`), ma
+la funzione esportata si chiama `proxy` e il **runtime è Node.js, non più Edge** (in
+Next 16 il proxy non supporta Edge). Conseguenza pratica: nel proxy sono disponibili le
+API Node, ma resta buona norma tenerlo leggero, perché gira su ogni richiesta. Il
+ruolo nel sistema è descritto in [[Auth_Utenti_e_Sessioni_Supabase]]. Il build lo
+segnala come "Proxy (Middleware)".
+
+### Lint da CLI, ESLint 9
+`next lint` non esiste più: il lint è **`eslint .`** (script `lint` di `package.json`,
+usato anche dalla CI) con la **flat config** `eslint.config.mjs`, che estende
+`eslint-config-next/core-web-vitals`. Ignora `.next`, `lib/generated/**` (client Prisma
+generato) e `public/sw.js`. Il vecchio `.eslintrc.json` è stato rimosso.
+
+### React 19: regole e compatibilità
+- Le regole di `react-hooks` aggiornate vietano `setState` sincrono dentro un `useEffect`
+  (`react-hooks/set-state-in-effect`). I tre casi del progetto sono stati riscritti **senza
+  disattivare la regola**: chiusura del menu mobile al cambio rotta con lo stato regolato
+  durante il render, URL e capacità di condivisione della pagina `/invite` con
+  `useSyncExternalStore` (snapshot server vuoto, valori reali dopo il mount), lettura del
+  rifiuto del banner PWA con lo stesso meccanismo. Vedi [[Interfaccia_Grafica_Dashboard]] e
+  [[App_Mobile_e_Offline_PWA]].
+- Nessun uso di `defaultProps`, `propTypes`, `findDOMNode`, `ReactDOM.render`,
+  `useFormState`. `forwardRef` con `useImperativeHandle` nel form abbonamento resta
+  supportato.
+- Le librerie UI (recharts 3, sonner 2, react-dropzone 15, qrcode.react 4, lucide-react)
+  dichiarano React 19 fra i peer: nessun aggiornamento è stato necessario.
+- `React.cache` e `force-dynamic` si comportano come prima.
+
+### Warning noti della build
+Turbopack segnala due volte "Dynamic filesystem access causes tracing of the whole
+project" sul client Prisma generato (`lib/generated/prisma/runtime/library.js`),
+raggiunto dal cron dei rinnovi e dalla pagina abbonamenti. Non blocca la build ed è
+innocuo per il codice, ma può gonfiare la traccia del deploy: da valutare, vedi
+[[Database_Tabelle_e_Modelli_Prisma]].
+
+---
+
 ## Configurazione rilevante
 
 - `serverActions.bodySizeLimit` a 4mb, richiesto da [[Lettura_Scontrini_OCR_Gemini]]
 - Cron giornaliero dichiarato in `vercel.json`, vedi [[Gestione_Pagamenti_e_Rinnovi]]
 - La build di rilascio esegue `prisma generate` prima di `next build`
+- `engines.node` è `24.x`; la CI usa Node 24
 
 ---
 

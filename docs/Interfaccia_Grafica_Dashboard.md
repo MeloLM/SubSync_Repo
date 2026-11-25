@@ -130,8 +130,8 @@ altrove.
 
 La libreria non entra nel bundle iniziale. Il grafico è caricato con
 `next/dynamic` e `ssr: false` da un wrapper client dedicato, che esiste solo
-perché la pagina dashboard è un Server Component e in Next 14 `ssr: false` non è
-consentito lì. Senza questo confine, i ~108 kB di Recharts peserebbero sul primo
+perché la pagina dashboard è un Server Component e nell'App Router `ssr: false` non è
+consentito lì (vale in Next 14 come in 16). Senza questo confine, i ~108 kB di Recharts peserebbero sul primo
 caricamento di ogni visita alla dashboard: inaccettabile per una PWA mobile-first
 (vedi [[App_Mobile_e_Offline_PWA]]).
 
