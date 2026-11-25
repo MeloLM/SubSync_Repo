@@ -46,6 +46,14 @@ e delega a Supabase. Il ritorno passa dal route handler di callback, che scambia
 codice PKCE per una sessione e reindirizza alla dashboard. Lo stesso handler serve
 i link di conferma email.
 
+Il callback accetta un parametro `next` con la destinazione dopo l'accesso, ma **non è
+fidato**: finisce concatenato all'origine del sito, quindi un valore come `@evil.com`
+darebbe `https://dominio@evil.com`, cioè un redirect verso un host esterno. Un helper
+puro e testato lascia passare solo i percorsi interni (inizio con `/`, non `//` né `/\`,
+nessun carattere di controllo) e ripiega sulla root in tutti gli altri casi: URL
+assoluti, stringa vuota, valore assente. Il principio è quello di
+[[Motore_Regole_NextJS]]: l'input del client si valida sul server.
+
 Perché OAuth funzioni servono le pagine legali pubbliche descritte in
 [[Motore_Regole_NextJS]]: sono un requisito della verifica Google, non un dettaglio.
 

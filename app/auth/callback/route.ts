@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
+import { safeRedirectPath } from "@/lib/validation/redirect";
+
 /**
  * 🔐 Route handler di callback auth (Sprint 2 · fix OAuth Sprint 7).
  * Riceve il `code` dai link Supabase (conferma email / magic link / OAuth PKCE)
@@ -17,8 +19,10 @@ import { createServerClient } from "@supabase/ssr";
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  // `next` opzionale; default alla dashboard che in questa app è la root `/`.
-  const next = searchParams.get("next") ?? "/";
+  // `next` opzionale, ma NON fidato: concatenato all'origine, `@evil.com` o
+  // `//evil.com` porterebbero fuori dal sito (open redirect). Solo percorsi interni;
+  // il ripiego è la dashboard, che in questa app è la root `/`.
+  const next = safeRedirectPath(searchParams.get("next"));
 
   if (!code) {
     return NextResponse.redirect(`${origin}/login?error=auth`);

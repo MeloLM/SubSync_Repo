@@ -349,6 +349,10 @@ Restano fuori i punti d'ingresso che non sono quelle mutazioni._
 - [ ] ⚠️ **In locale si lavora sul database di produzione**: `.env.local` punta `DATABASE_URL` al pooler Supabase, quindi `NODE_ENV === "development"` è vero mentre si è collegati ai dati veri. Il seed se ne difende con un secondo cancello; va valutato se istituzionalizzare l'avvertenza in `AI_law_subsync.md`
 - [ ] ⚠️ Prima del lancio: database di produzione separato dalla sandbox e migrazioni tolte dallo script build
 
+### 🔐 Open redirect su `/auth/callback` 🔴 _(da Sprint 8)_
+
+- [x] 🔐 Il parametro `next` era concatenato all'origine senza controlli (`next=@evil.com` → `https://dominio@evil.com`): ora passano solo percorsi interni (inizio con `/`, non `//` né `/\`, nessun carattere di controllo), altrimenti si ripiega su `/` → [[Auth_Utenti_e_Sessioni_Supabase]]
+
 ---
 
 ## 📖 Legenda
