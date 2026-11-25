@@ -21,14 +21,19 @@ export function InviteResponseButtons({
   function respond(accept: boolean) {
     startTransition(async () => {
       try {
-        await respondToInvite(memberId, accept);
+        const res = await respondToInvite(memberId, accept);
+        if (!res.ok) {
+          toast.error("Operazione non riuscita", { description: res.error });
+          return;
+        }
         toast.success(accept ? "Invito accettato" : "Invito rifiutato", {
           description: subscriptionName,
         });
         router.refresh();
-      } catch (err) {
+      } catch {
+        // Guasto inatteso (rete, errore server): gli errori attesi arrivano come `res.error`.
         toast.error("Operazione non riuscita", {
-          description: err instanceof Error ? err.message : "Errore.",
+          description: "Si è verificato un errore imprevisto. Riprova tra poco.",
         });
       }
     });

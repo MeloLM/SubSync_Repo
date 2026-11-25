@@ -51,6 +51,17 @@ senza cercarlo. Vedi [[Interfaccia_Grafica_Dashboard]].
 
 ---
 
+## Esiti delle mutazioni
+
+Invitare, regolare la quota, segnare il saldo, rimuovere e rispondere a un invito
+restituiscono un `ActionResult` senza payload. Sono errori **attesi**, quindi valori e non
+eccezioni: email vuota o propria, quota non numerica o non positiva, abbonamento
+non trovato o disattivato, email già invitata (anche per due richieste concorrenti,
+intercettate dal vincolo di unicità), membro o invito inesistente o altrui, invito già
+gestito. Convenzione in [[Motore_Regole_NextJS]].
+
+---
+
 ## Flusso di un invito
 
 ```

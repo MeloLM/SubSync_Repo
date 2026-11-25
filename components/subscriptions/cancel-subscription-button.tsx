@@ -29,13 +29,18 @@ export function CancelSubscriptionButton({
   function handleCancel() {
     startTransition(async () => {
       try {
-        await cancelSubscription(id);
+        const res = await cancelSubscription(id);
+        if (!res.ok) {
+          toast.error("Disattivazione non riuscita", { description: res.error });
+          return;
+        }
         toast.success("Abbonamento disattivato", { description: name });
         setOpen(false);
         router.refresh();
-      } catch (err) {
+      } catch {
+        // Guasto inatteso (rete, errore server): gli errori attesi arrivano come `res.error`.
         toast.error("Disattivazione non riuscita", {
-          description: err instanceof Error ? err.message : "Errore.",
+          description: "Si è verificato un errore imprevisto. Riprova tra poco.",
         });
       }
     });

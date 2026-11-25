@@ -97,20 +97,24 @@ export const SubscriptionForm = forwardRef<
 
     startTransition(async () => {
       try {
-        if (initial) {
-          await updateSubscription(initial.id, input);
-        } else {
-          await createSubscription(input);
+        const res = initial
+          ? await updateSubscription(initial.id, input)
+          : await createSubscription(input);
+        if (!res.ok) {
+          toast.error(isEdit ? "Aggiornamento non riuscito" : "Salvataggio non riuscito", {
+            description: res.error,
+          });
+          return;
         }
         toast.success(isEdit ? "Abbonamento aggiornato" : "Abbonamento salvato", {
           description: `${input.name} · ${input.currency} ${input.amount}`,
         });
         router.push("/subscriptions");
         router.refresh();
-      } catch (err) {
+      } catch {
+        // Guasto inatteso (rete, errore server): gli errori attesi arrivano come `res.error`.
         toast.error(isEdit ? "Aggiornamento non riuscito" : "Salvataggio non riuscito", {
-          description:
-            err instanceof Error ? err.message : "Errore durante il salvataggio.",
+          description: "Si è verificato un errore imprevisto. Riprova tra poco.",
         });
       }
     });

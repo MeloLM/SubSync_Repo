@@ -15,6 +15,23 @@ import type {
  * (Decimal → stringa a 2 decimali; Date → ISO 8601 UTC).
  */
 
+/**
+ * Esito di una Server Action di mutazione, restituito come **valore**.
+ *
+ * In produzione Next.js oscura il messaggio delle eccezioni lanciate da una Server
+ * Action: il client riceve un testo generico e l'utente non capisce cosa è andato
+ * storto. `error` invece è un dato intenzionale e raggiunge sempre la UI.
+ *
+ * Gli errori **attesi** (validazione, non trovato, non autorizzato, duplicato,
+ * sessione scaduta) diventano `{ ok: false, error }` con messaggio in italiano.
+ * Il `throw` resta solo per i guasti inattesi (database irraggiungibile, bug).
+ *
+ * Le mutazioni senza payload usano `ActionResult<null>`.
+ */
+export type ActionResult<T> =
+  | { ok: true; data: T }
+  | { ok: false; error: string };
+
 export interface SubscriptionDTO {
   id: string;
   name: string;

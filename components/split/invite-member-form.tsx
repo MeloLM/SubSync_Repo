@@ -26,13 +26,18 @@ export function InviteMemberForm({ subscriptionId }: { subscriptionId: string })
 
     startTransition(async () => {
       try {
-        await inviteMember(subscriptionId, email, weight);
+        const res = await inviteMember(subscriptionId, email, weight);
+        if (!res.ok) {
+          toast.error("Invito non riuscito", { description: res.error });
+          return;
+        }
         toast.success("Invito inviato", { description: email });
         formRef.current?.reset();
         router.refresh();
-      } catch (err) {
+      } catch {
+        // Guasto inatteso (rete, errore server): gli errori attesi arrivano come `res.error`.
         toast.error("Invito non riuscito", {
-          description: err instanceof Error ? err.message : "Errore.",
+          description: "Si è verificato un errore imprevisto. Riprova tra poco.",
         });
       }
     });

@@ -67,6 +67,30 @@ Solo ciò che ha davvero bisogno di stato o eventi del browser: form con
 `useTransition`, drawer di navigazione, dropzone dello scanner, grafico, banner PWA,
 error boundary. Tutto il resto è Server Component per difetto.
 
+### Errori come valore, non come eccezione
+In produzione Next.js **oscura il messaggio** di ogni eccezione lanciata da una Server
+Action: il client riceve un testo generico e l'utente non sa cosa correggere. Per questo
+le mutazioni restituiscono un esito tipizzato condiviso, `ActionResult<T>`: o
+`{ ok: true, data }` o `{ ok: false, error }`, con `error` in italiano.
+
+- **Errore atteso** (input non valido, risorsa non trovata o altrui, duplicato, sessione
+  scaduta): diventa `{ ok: false, error }` e raggiunge sempre la UI.
+- **Errore inatteso** (database irraggiungibile, bug): resta un `throw`, e l'error
+  boundary lo intercetta.
+- Le mutazioni senza payload ritornano `ActionResult<null>`.
+- I componenti client **leggono `ok`** prima di mostrare il toast di successo: una
+  `await` senza controllo dell'esito segnalerebbe come riuscita un'operazione fallita.
+
+Un piccolo modulo di helper traduce i casi ricorrenti: l'utente corrente come
+`null` anziché eccezione quando la sessione manca, e il riconoscimento dei codici
+Prisma attesi (record assente, violazione di unicità) da mappare su un messaggio.
+
+Applicato a [[Gestione_Pagamenti_e_Rinnovi]] e [[Condivisione_Spese_e_Gruppi]]; lo stesso
+schema, con unione discriminata propria, regge lo scanner di
+[[Lettura_Scontrini_OCR_Gemini]] e gli esiti di [[Auth_Utenti_e_Sessioni_Supabase]].
+Le **letture** non cambiano: restituiscono il dato (o `null`) e lanciano se la sessione
+manca.
+
 ---
 
 ## Cache e invalidazione

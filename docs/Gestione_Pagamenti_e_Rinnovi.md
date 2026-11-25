@@ -17,6 +17,11 @@ Ogni mutazione esegue in sequenza:
 3. scrittura
 4. `revalidatePath` sulle viste dipendenti
 
+Creazione, modifica, disdetta e riattivazione restituiscono un `ActionResult`
+(`SubscriptionDTO` per creazione e modifica, nessun payload per le altre due): un
+abbonamento assente o di un altro utente, o una sessione scaduta, tornano come
+messaggio e non come eccezione. Convenzione in [[Motore_Regole_NextJS]].
+
 Le letture (elenco e singolo) passano dal layer memoizzato descritto in
 [[Database_Tabelle_e_Modelli_Prisma]] e ritornano DTO già serializzabili.
 

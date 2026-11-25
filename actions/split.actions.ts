@@ -1,12 +1,18 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { BillingCycle } from "@/lib/generated/prisma";
+import type { BillingCycle, SubscriptionMember } from "@/lib/generated/prisma";
 
 import { prisma } from "@/lib/prisma";
 import { ZERO, money } from "@/lib/money";
 import { computeShares } from "@/lib/split";
 import { getCurrentUser, getCurrentUserId } from "@/lib/auth";
+import {
+  SESSION_EXPIRED_ERROR,
+  getSessionUser,
+  isPrismaError,
+} from "@/lib/action-result";
+import type { ActionResult } from "@/types";
 import { getSubscriptionByIdForUser } from "@/lib/data/subscriptions";
 import { isActive } from "@/lib/subscription-status";
 import {
@@ -77,14 +83,40 @@ function revalidateSplitViews(subscriptionId?: string) {
   if (subscriptionId) revalidatePath(`/subscriptions/${subscriptionId}/split`);
 }
 
-/** Verifica che un membro appartenga a un abbonamento del proprietario corrente. */
-async function requireOwnedMember(memberId: string) {
-  const userId = await getCurrentUserId();
+const MEMBER_NOT_FOUND_ERROR = "Membro non trovato o non autorizzato.";
+const INVALID_WEIGHT_ERROR = "La quota deve essere un numero maggiore di zero.";
+const DUPLICATE_INVITE_ERROR =
+  "Questa email è già stata invitata a questo abbonamento.";
+
+/**
+ * Peso della quota da input grezzo, oppure `null` se non è un numero maggiore di
+ * zero. `money()` lancia su una stringa non numerica: per le mutazioni che
+ * restituiscono `ActionResult` è un input sbagliato atteso, non un guasto.
+ */
+function parseWeight(value: string | number) {
+  try {
+    const weight = money(value);
+    return weight.isFinite() && weight.gt(ZERO) ? weight : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Risolve un membro appartenente a un abbonamento del proprietario corrente.
+ * Errori attesi (sessione scaduta, membro assente o altrui) tornano come valore.
+ */
+async function resolveOwnedMember(
+  memberId: string,
+): Promise<ActionResult<SubscriptionMember>> {
+  const user = await getSessionUser();
+  if (!user) return { ok: false, error: SESSION_EXPIRED_ERROR };
+
   const member = await prisma.subscriptionMember.findFirst({
-    where: { id: memberId, subscription: { userId } },
+    where: { id: memberId, subscription: { userId: user.id } },
   });
-  if (!member) throw new Error("Membro non trovato o non autorizzato.");
-  return member;
+  if (!member) return { ok: false, error: MEMBER_NOT_FOUND_ERROR };
+  return { ok: true, data: member };
 }
 
 // ─────────────────────────── Lato proprietario ───────────────────────────
@@ -118,79 +150,130 @@ export async function getSplitOverview(
   };
 }
 
+/*
+ * Le mutazioni restituiscono `ActionResult` (vedi `types/index.ts`): gli errori
+ * attesi (input non valido, non trovato, non autorizzato, duplicato, sessione
+ * scaduta) tornano come `{ ok: false, error }`, perché in produzione un `throw`
+ * arriverebbe al client redatto. Il `throw` resta solo per i guasti inattesi.
+ */
 export async function inviteMember(
   subscriptionId: string,
   email: string,
   shareWeight: string | number = 1,
-): Promise<void> {
-  const user = await getCurrentUser();
+): Promise<ActionResult<null>> {
+  const user = await getSessionUser();
+  if (!user) return { ok: false, error: SESSION_EXPIRED_ERROR };
+
   const normalized = email.trim().toLowerCase();
-  if (!normalized) throw new Error("Email obbligatoria.");
+  if (!normalized) return { ok: false, error: "Email obbligatoria." };
   if (normalized === (user.email ?? "").toLowerCase()) {
-    throw new Error("Sei già il proprietario: non puoi invitare te stesso.");
+    return {
+      ok: false,
+      error: "Sei già il proprietario: non puoi invitare te stesso.",
+    };
   }
+
+  const weight = parseWeight(shareWeight);
+  if (!weight) return { ok: false, error: INVALID_WEIGHT_ERROR };
 
   const subscription = await getSubscriptionByIdForUser(subscriptionId, user.id);
-  if (!subscription) throw new Error("Abbonamento non trovato o non autorizzato.");
+  if (!subscription) {
+    return { ok: false, error: "Abbonamento non trovato o non autorizzato." };
+  }
   // Soft-delete: non si invita qualcuno su un abbonamento già disdetto.
   if (!isActive(subscription)) {
-    throw new Error("Abbonamento disattivato: riattivalo per invitare partecipanti.");
+    return {
+      ok: false,
+      error: "Abbonamento disattivato: riattivalo per invitare partecipanti.",
+    };
   }
-
-  const weight = money(shareWeight);
-  if (weight.lte(ZERO)) throw new Error("La quota deve essere maggiore di zero.");
 
   const duplicate = await prisma.subscriptionMember.findUnique({
     where: { subscriptionId_email: { subscriptionId, email: normalized } },
   });
-  if (duplicate) {
-    throw new Error("Questa email è già stata invitata a questo abbonamento.");
-  }
+  if (duplicate) return { ok: false, error: DUPLICATE_INVITE_ERROR };
 
   // Se esiste già un account con quell'email, lo pre-collego (resta PENDING).
   const existing = await prisma.user.findUnique({ where: { email: normalized } });
 
-  await prisma.subscriptionMember.create({
-    data: {
-      subscriptionId,
-      email: normalized,
-      userId: existing?.id ?? null,
-      shareWeight: weight,
-    },
-  });
+  try {
+    await prisma.subscriptionMember.create({
+      data: {
+        subscriptionId,
+        email: normalized,
+        userId: existing?.id ?? null,
+        shareWeight: weight,
+      },
+    });
+  } catch (err) {
+    // P2002: due inviti concorrenti hanno superato insieme il controllo sopra.
+    if (isPrismaError(err, "P2002")) return { ok: false, error: DUPLICATE_INVITE_ERROR };
+    throw err;
+  }
 
   revalidateSplitViews(subscriptionId);
+  return { ok: true, data: null };
 }
 
 export async function updateMemberShare(
   memberId: string,
   shareWeight: string | number,
-): Promise<void> {
-  const member = await requireOwnedMember(memberId);
-  const weight = money(shareWeight);
-  if (weight.lte(ZERO)) throw new Error("La quota deve essere maggiore di zero.");
+): Promise<ActionResult<null>> {
+  const owned = await resolveOwnedMember(memberId);
+  if (!owned.ok) return owned;
+  const member = owned.data;
 
-  await prisma.subscriptionMember.update({
-    where: { id: memberId },
-    data: { shareWeight: weight },
-  });
+  const weight = parseWeight(shareWeight);
+  if (!weight) return { ok: false, error: INVALID_WEIGHT_ERROR };
+
+  try {
+    await prisma.subscriptionMember.update({
+      where: { id: memberId },
+      data: { shareWeight: weight },
+    });
+  } catch (err) {
+    // P2025: il membro è stato rimosso fra la lettura e la scrittura.
+    if (isPrismaError(err, "P2025")) return { ok: false, error: MEMBER_NOT_FOUND_ERROR };
+    throw err;
+  }
   revalidateSplitViews(member.subscriptionId);
+  return { ok: true, data: null };
 }
 
-export async function toggleMemberSettled(memberId: string): Promise<void> {
-  const member = await requireOwnedMember(memberId);
+export async function toggleMemberSettled(
+  memberId: string,
+): Promise<ActionResult<null>> {
+  const owned = await resolveOwnedMember(memberId);
+  if (!owned.ok) return owned;
+  const member = owned.data;
+
   const settled = !member.settled;
-  await prisma.subscriptionMember.update({
-    where: { id: memberId },
-    data: { settled, settledAt: settled ? new Date() : null },
-  });
+  try {
+    await prisma.subscriptionMember.update({
+      where: { id: memberId },
+      data: { settled, settledAt: settled ? new Date() : null },
+    });
+  } catch (err) {
+    if (isPrismaError(err, "P2025")) return { ok: false, error: MEMBER_NOT_FOUND_ERROR };
+    throw err;
+  }
   revalidateSplitViews(member.subscriptionId);
+  return { ok: true, data: null };
 }
 
-export async function removeMember(memberId: string): Promise<void> {
-  const member = await requireOwnedMember(memberId);
-  await prisma.subscriptionMember.delete({ where: { id: memberId } });
+export async function removeMember(memberId: string): Promise<ActionResult<null>> {
+  const owned = await resolveOwnedMember(memberId);
+  if (!owned.ok) return owned;
+  const member = owned.data;
+
+  try {
+    await prisma.subscriptionMember.delete({ where: { id: memberId } });
+  } catch (err) {
+    if (isPrismaError(err, "P2025")) return { ok: false, error: MEMBER_NOT_FOUND_ERROR };
+    throw err;
+  }
   revalidateSplitViews(member.subscriptionId);
+  return { ok: true, data: null };
 }
 
 // ──────────────────────────── Lato invitato ────────────────────────────
@@ -254,17 +337,18 @@ export async function countPendingInvites(): Promise<number> {
 export async function respondToInvite(
   memberId: string,
   accept: boolean,
-): Promise<void> {
-  const user = await getCurrentUser();
+): Promise<ActionResult<null>> {
+  const user = await getSessionUser();
+  if (!user) return { ok: false, error: SESSION_EXPIRED_ERROR };
   const email = (user.email ?? "").toLowerCase();
 
   const member = await prisma.subscriptionMember.findUnique({
     where: { id: memberId },
   });
   if (!member || member.email.toLowerCase() !== email) {
-    throw new Error("Invito non trovato.");
+    return { ok: false, error: "Invito non trovato." };
   }
-  if (member.status !== "PENDING") throw new Error("Invito già gestito.");
+  if (member.status !== "PENDING") return { ok: false, error: "Invito già gestito." };
 
   if (accept) {
     // Garantisce il record Prisma `User` (FK) come in createSubscription.
@@ -286,4 +370,5 @@ export async function respondToInvite(
 
   revalidateSplitViews(member.subscriptionId);
   revalidatePath("/");
+  return { ok: true, data: null };
 }

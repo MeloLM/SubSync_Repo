@@ -11,6 +11,7 @@ import {
   updateMemberShare,
   type MemberDTO,
 } from "@/actions/split.actions";
+import type { ActionResult } from "@/types";
 
 const STATUS_STYLES: Record<MemberDTO["status"], { label: string; cls: string }> = {
   PENDING: {
@@ -47,39 +48,56 @@ export function MemberRow({
   const status = STATUS_STYLES[member.status];
   const isDeclined = member.status === "DECLINED";
 
-  function run(fn: () => Promise<void>, errTitle: string) {
+  /**
+   * Esegue un'azione sul membro. Con `{ ok: false }` mostra solo l'errore (nessun
+   * toast di successo, nessun refresh) e chiama `onFail`; con `{ ok: true }` mostra
+   * il toast di successo, se presente, e aggiorna la vista.
+   */
+  function run(
+    fn: () => Promise<ActionResult<null>>,
+    errTitle: string,
+    opts?: { successTitle?: string; onFail?: () => void },
+  ) {
     startTransition(async () => {
       try {
-        await fn();
+        const res = await fn();
+        if (!res.ok) {
+          toast.error(errTitle, { description: res.error });
+          opts?.onFail?.();
+          return;
+        }
+        if (opts?.successTitle) {
+          toast.success(opts.successTitle, { description: member.email });
+        }
         router.refresh();
-      } catch (err) {
+      } catch {
+        // Guasto inatteso (rete, errore server): gli errori attesi arrivano come `res.error`.
         toast.error(errTitle, {
-          description: err instanceof Error ? err.message : "Errore.",
+          description: "Si è verificato un errore imprevisto. Riprova tra poco.",
         });
+        opts?.onFail?.();
       }
     });
   }
 
   function saveWeight() {
     if (weight === member.shareWeight) return;
-    run(async () => {
-      await updateMemberShare(member.id, weight);
-      toast.success("Quota aggiornata", { description: member.email });
-    }, "Aggiornamento quota non riuscito");
+    run(() => updateMemberShare(member.id, weight), "Aggiornamento quota non riuscito", {
+      successTitle: "Quota aggiornata",
+      // Il valore rifiutato non deve restare nel campo come se fosse stato salvato.
+      onFail: () => setWeight(member.shareWeight),
+    });
   }
 
   function toggleSettled() {
-    run(async () => {
-      await toggleMemberSettled(member.id);
-    }, "Operazione non riuscita");
+    run(() => toggleMemberSettled(member.id), "Operazione non riuscita");
   }
 
   function remove() {
     if (!window.confirm(`Rimuovere ${member.email} dalla condivisione?`)) return;
-    run(async () => {
-      await removeMember(member.id);
-      toast.success("Membro rimosso", { description: member.email });
-    }, "Rimozione non riuscita");
+    run(() => removeMember(member.id), "Rimozione non riuscita", {
+      successTitle: "Membro rimosso",
+    });
   }
 
   return (
