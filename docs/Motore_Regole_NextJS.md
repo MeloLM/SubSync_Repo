@@ -85,6 +85,24 @@ Un piccolo modulo di helper traduce i casi ricorrenti: l'utente corrente come
 `null` anziché eccezione quando la sessione manca, e il riconoscimento dei codici
 Prisma attesi (record assente, violazione di unicità) da mappare su un messaggio.
 
+### Validazione dell'input sul server
+Il client non è fidato: ogni mutazione di abbonamenti e split valida l'input **prima** di
+toccare il database, con schemi zod raccolti in `lib/validation/`, un file per dominio
+(abbonamenti, split) più i mattoni comuni. Sono helper puri, testati accanto al codice.
+
+- Lo schema **valida e normalizza** (nome e email tagliati, email in minuscolo, chiavi
+  sconosciute scartate), ma **non converte**: gli importi e le percentuali restano
+  stringhe e la conversione resta a `money()` (Regola 1), la data resta una stringa
+  `AAAA-MM-GG` e la mezzanotte UTC resta a `toUtcMidnight()` (Regola 2).
+- L'action usa solo l'**output** dello schema, mai l'input grezzo.
+- Il primo errore diventa il `error` di `{ ok: false, error }`, in italiano: la UI lo
+  mostra già, senza modifiche.
+- Gli schemi non toccano il database. Ciò che richiede una lettura (la categoria è
+  dell'utente? l'abbonamento è suo e attivo? l'email è già invitata?) resta nell'action,
+  dopo lo schema.
+- Gli enum derivano dallo schema Prisma: un valore nuovo nel database è accettato senza
+  una seconda lista da tenere allineata.
+
 Applicato a [[Gestione_Pagamenti_e_Rinnovi]] e [[Condivisione_Spese_e_Gruppi]]; lo stesso
 schema, con unione discriminata propria, regge lo scanner di
 [[Lettura_Scontrini_OCR_Gemini]] e gli esiti di [[Auth_Utenti_e_Sessioni_Supabase]].

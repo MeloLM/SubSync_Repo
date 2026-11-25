@@ -329,6 +329,18 @@ modificabile. Restano due evoluzioni con conseguenze fuori dalla pagina._
   - ⚠️ Si incrocia con l'ingestione email: una ricevuta che non arriva è essa stessa un segnale di pagamento mancato → [[Email_Ingestion_e_Matching]]
 - [ ] Preferenza di fuso orario: resta bloccata su UTC per vincolo architetturale, ma la spiegazione nell'interfaccia va resa meno tecnica
 
+### 🛡️ Validazione lato server 🟠 _(da Sprint 8)_
+
+_Gli schemi zod di `lib/validation/` coprono le mutazioni di abbonamenti e split.
+Restano fuori i punti d'ingresso che non sono quelle mutazioni._
+
+- [x] Schemi zod per abbonamenti e split: nome, importo, valuta EUR/USD, ciclo, data di rinnovo non nel passato, percentuali fiscali 0–100, email normalizzata, quota 0–100 → [[Gestione_Pagamenti_e_Rinnovi]], [[Condivisione_Spese_e_Gruppi]]
+- [x] Appartenenza della categoria controllata nell'action (propria o di sistema)
+- [ ] **Dati già salvati**: la validazione protegge l'ingresso, non ripulisce l'esistente. Una `nextRenewalDate` remota o una valuta malformata già nel database restano; serve una verifica una tantum, da fare con consapevolezza perché tocca dati reali
+- [ ] Validare l'**output di Gemini** dello scanner con gli stessi schemi, invece di affidarsi al solo ritaglio lato form → [[Lettura_Scontrini_OCR_Gemini]]
+- [ ] Il **cron dei rinnovi** recupera i cicli arretrati con un tetto tecnico di 600 iterazioni per abbonamento, che è un salvagente e non una politica: per un mensile sono cinquant'anni di `PaymentLog`. Gli schemi chiudono l'ingresso; cosa fare di un arretrato già presente nei dati va deciso → [[Gestione_Pagamenti_e_Rinnovi]]
+- [ ] Limitare la frequenza delle mutazioni (rate limiting): oggi un utente autenticato può invitare o creare senza tetto
+
 ### 🧪 Strumenti di sviluppo
 
 - [x] **Seed di dati finti** per il collaudo visivo: 13 abbonamenti costruiti per popolare ogni vista del grafico, con storico, un disdetto e un aumento di prezzo

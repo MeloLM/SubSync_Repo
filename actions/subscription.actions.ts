@@ -10,7 +10,7 @@ import type {
 
 import { prisma } from "@/lib/prisma";
 import { money } from "@/lib/money";
-import { toUtcMidnight } from "@/lib/date";
+import { dayKeyUTC, toUtcMidnight } from "@/lib/date";
 import { getCurrentUserId } from "@/lib/auth";
 import {
   SESSION_EXPIRED_ERROR,
@@ -22,6 +22,12 @@ import {
   getSubscriptionByIdForUser,
 } from "@/lib/data/subscriptions";
 import { onlyActive } from "@/lib/subscription-status";
+import { parseInput } from "@/lib/validation/common";
+import {
+  createSubscriptionSchema,
+  subscriptionIdSchema,
+  updateSubscriptionSchema,
+} from "@/lib/validation/subscription";
 import {
   toSubscriptionDTO,
   type ActionResult,
@@ -77,6 +83,20 @@ function fiscalWriteData(input: Partial<SubscriptionInput>) {
 }
 
 const NOT_FOUND_ERROR = "Abbonamento non trovato o non autorizzato.";
+const CATEGORY_NOT_FOUND_ERROR = "Categoria non trovata o non disponibile.";
+
+/**
+ * La categoria esiste ed è utilizzabile dall'utente: sua, oppure di sistema
+ * (`userId` null, seed condiviso). Una categoria di **un altro utente** no: la
+ * sola FK non lo impedirebbe, perché `categoryId` punta a qualunque riga.
+ */
+async function isCategoryUsableBy(userId: string, categoryId: string): Promise<boolean> {
+  const category = await prisma.expenseCategory.findFirst({
+    where: { id: categoryId, OR: [{ userId }, { userId: null }] },
+    select: { id: true },
+  });
+  return category !== null;
+}
 
 /** Invalida la cache delle viste che dipendono dagli abbonamenti (Regola 3). */
 function revalidateSubscriptionViews() {
@@ -106,10 +126,19 @@ export async function getSubscription(id: string): Promise<SubscriptionDTO | nul
  * client redatto. Il `throw` resta solo per i guasti inattesi.
  */
 export async function createSubscription(
-  input: SubscriptionInput,
+  rawInput: SubscriptionInput,
 ): Promise<ActionResult<SubscriptionDTO>> {
   const user = await getSessionUser();
   if (!user) return { ok: false, error: SESSION_EXPIRED_ERROR };
+
+  // Il client non è fidato: da qui in poi si usa solo l'output validato.
+  const parsed = parseInput(createSubscriptionSchema(), rawInput);
+  if (!parsed.ok) return parsed;
+  const input = parsed.data;
+
+  if (input.categoryId && !(await isCategoryUsableBy(user.id, input.categoryId))) {
+    return { ok: false, error: CATEGORY_NOT_FOUND_ERROR };
+  }
 
   // Garantisce il record Prisma `User` (id = UUID Supabase) per la FK userId.
   await prisma.user.upsert({
@@ -123,7 +152,7 @@ export async function createSubscription(
       userId: user.id,
       name: input.name,
       amount: money(input.amount), // Regola 1
-      currency: input.currency ?? "EUR",
+      currency: input.currency, // "EUR" per default nello schema
       billingCycle: input.billingCycle,
       nextRenewalDate: toUtcMidnight(input.nextRenewalDate), // Regola 2
       ...fiscalWriteData(input), // Fiscalità (Sprint 7)
@@ -135,11 +164,32 @@ export async function createSubscription(
 }
 
 export async function updateSubscription(
-  id: string,
-  input: Partial<SubscriptionInput>,
+  rawId: string,
+  rawInput: Partial<SubscriptionInput>,
 ): Promise<ActionResult<SubscriptionDTO>> {
   const user = await getSessionUser();
   if (!user) return { ok: false, error: SESSION_EXPIRED_ERROR };
+
+  const parsedId = parseInput(subscriptionIdSchema, rawId);
+  if (!parsedId.ok) return parsedId;
+  const id = parsedId.data;
+
+  // La data di rinnovo non può finire nel passato, ma il form rimanda sempre
+  // quella attuale: si confronta con il record, così la sola modifica del nome
+  // non viene respinta quando il rinnovo è già scaduto.
+  const current = await getSubscriptionByIdForUser(id, user.id);
+  if (!current) return { ok: false, error: NOT_FOUND_ERROR };
+
+  const parsed = parseInput(
+    updateSubscriptionSchema({ currentRenewalDate: dayKeyUTC(current.nextRenewalDate) }),
+    rawInput,
+  );
+  if (!parsed.ok) return parsed;
+  const input = parsed.data;
+
+  if (input.categoryId && !(await isCategoryUsableBy(user.id, input.categoryId))) {
+    return { ok: false, error: CATEGORY_NOT_FOUND_ERROR };
+  }
 
   let subscription;
   try {
@@ -193,11 +243,15 @@ export async function reactivateSubscription(
 
 /** Scrittura comune a disdetta e riattivazione: stessa ownership, stessi errori. */
 async function setCanceledAt(
-  id: string,
+  rawId: string,
   canceledAt: Date | null,
 ): Promise<ActionResult<null>> {
   const user = await getSessionUser();
   if (!user) return { ok: false, error: SESSION_EXPIRED_ERROR };
+
+  const parsedId = parseInput(subscriptionIdSchema, rawId);
+  if (!parsedId.ok) return parsedId;
+  const id = parsedId.data;
 
   try {
     await prisma.subscription.update({

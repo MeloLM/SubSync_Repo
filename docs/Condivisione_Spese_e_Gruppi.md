@@ -55,10 +55,24 @@ senza cercarlo. Vedi [[Interfaccia_Grafica_Dashboard]].
 
 Invitare, regolare la quota, segnare il saldo, rimuovere e rispondere a un invito
 restituiscono un `ActionResult` senza payload. Sono errori **attesi**, quindi valori e non
-eccezioni: email vuota o propria, quota non numerica o non positiva, abbonamento
+eccezioni: email vuota, non valida o propria, quota non numerica o non positiva, abbonamento
 non trovato o disattivato, email già invitata (anche per due richieste concorrenti,
 intercettate dal vincolo di unicità), membro o invito inesistente o altrui, invito già
 gestito. Convenzione in [[Motore_Regole_NextJS]].
+
+### Validazione dell'input
+Ogni mutazione passa da uno schema zod prima di leggere il database
+(`lib/validation/`, convenzione in [[Motore_Regole_NextJS]]):
+
+- **email**: tagliata, in minuscolo, di forma valida e non oltre 254 caratteri;
+  è la chiave dell'invito, quindi la normalizzazione è parte della regola;
+- **quota** (`shareWeight`): maggiore di zero e al massimo 100, fino a quattro
+  decimali; resta una stringa fino a `money()` (Regola 1), omessa vale 1;
+- **identificativi** di abbonamento e membro: non vuoti e di lunghezza sana;
+- **risposta all'invito**: un booleano, non un valore troppo permissivo.
+
+Restano nell'action le regole che dipendono dall'utente o dal database: non invitare
+se stessi, abbonamento proprio e attivo, invito duplicato.
 
 ---
 

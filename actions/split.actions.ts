@@ -15,6 +15,13 @@ import {
 import type { ActionResult } from "@/types";
 import { getSubscriptionByIdForUser } from "@/lib/data/subscriptions";
 import { isActive } from "@/lib/subscription-status";
+import { parseInput } from "@/lib/validation/common";
+import {
+  inviteMemberSchema,
+  memberActionSchema,
+  respondToInviteSchema,
+  updateMemberShareSchema,
+} from "@/lib/validation/split";
 import {
   getMembersBySubscription,
   getPendingInvitesForEmail,
@@ -84,23 +91,8 @@ function revalidateSplitViews(subscriptionId?: string) {
 }
 
 const MEMBER_NOT_FOUND_ERROR = "Membro non trovato o non autorizzato.";
-const INVALID_WEIGHT_ERROR = "La quota deve essere un numero maggiore di zero.";
 const DUPLICATE_INVITE_ERROR =
   "Questa email è già stata invitata a questo abbonamento.";
-
-/**
- * Peso della quota da input grezzo, oppure `null` se non è un numero maggiore di
- * zero. `money()` lancia su una stringa non numerica: per le mutazioni che
- * restituiscono `ActionResult` è un input sbagliato atteso, non un guasto.
- */
-function parseWeight(value: string | number) {
-  try {
-    const weight = money(value);
-    return weight.isFinite() && weight.gt(ZERO) ? weight : null;
-  } catch {
-    return null;
-  }
-}
 
 /**
  * Risolve un membro appartenente a un abbonamento del proprietario corrente.
@@ -112,8 +104,11 @@ async function resolveOwnedMember(
   const user = await getSessionUser();
   if (!user) return { ok: false, error: SESSION_EXPIRED_ERROR };
 
+  const parsed = parseInput(memberActionSchema, { memberId });
+  if (!parsed.ok) return parsed;
+
   const member = await prisma.subscriptionMember.findFirst({
-    where: { id: memberId, subscription: { userId: user.id } },
+    where: { id: parsed.data.memberId, subscription: { userId: user.id } },
   });
   if (!member) return { ok: false, error: MEMBER_NOT_FOUND_ERROR };
   return { ok: true, data: member };
@@ -157,24 +152,28 @@ export async function getSplitOverview(
  * arriverebbe al client redatto. Il `throw` resta solo per i guasti inattesi.
  */
 export async function inviteMember(
-  subscriptionId: string,
-  email: string,
-  shareWeight: string | number = 1,
+  rawSubscriptionId: string,
+  rawEmail: string,
+  rawShareWeight: string | number = 1,
 ): Promise<ActionResult<null>> {
   const user = await getSessionUser();
   if (!user) return { ok: false, error: SESSION_EXPIRED_ERROR };
 
-  const normalized = email.trim().toLowerCase();
-  if (!normalized) return { ok: false, error: "Email obbligatoria." };
+  // Email tagliata e in minuscolo, quota > 0 e ≤ 100: dal client non ci si fida.
+  const parsed = parseInput(inviteMemberSchema, {
+    subscriptionId: rawSubscriptionId,
+    email: rawEmail,
+    shareWeight: rawShareWeight,
+  });
+  if (!parsed.ok) return parsed;
+  const { subscriptionId, email: normalized, shareWeight } = parsed.data;
+
   if (normalized === (user.email ?? "").toLowerCase()) {
     return {
       ok: false,
       error: "Sei già il proprietario: non puoi invitare te stesso.",
     };
   }
-
-  const weight = parseWeight(shareWeight);
-  if (!weight) return { ok: false, error: INVALID_WEIGHT_ERROR };
 
   const subscription = await getSubscriptionByIdForUser(subscriptionId, user.id);
   if (!subscription) {
@@ -202,7 +201,7 @@ export async function inviteMember(
         subscriptionId,
         email: normalized,
         userId: existing?.id ?? null,
-        shareWeight: weight,
+        shareWeight: money(shareWeight), // Regola 1
       },
     });
   } catch (err) {
@@ -216,20 +215,25 @@ export async function inviteMember(
 }
 
 export async function updateMemberShare(
-  memberId: string,
-  shareWeight: string | number,
+  rawMemberId: string,
+  rawShareWeight: string | number,
 ): Promise<ActionResult<null>> {
-  const owned = await resolveOwnedMember(memberId);
+  // Prima sessione e appartenenza (anche l'id viene validato lì), poi la quota.
+  const owned = await resolveOwnedMember(rawMemberId);
   if (!owned.ok) return owned;
   const member = owned.data;
 
-  const weight = parseWeight(shareWeight);
-  if (!weight) return { ok: false, error: INVALID_WEIGHT_ERROR };
+  const parsed = parseInput(updateMemberShareSchema, {
+    memberId: member.id,
+    shareWeight: rawShareWeight,
+  });
+  if (!parsed.ok) return parsed;
+  const { shareWeight } = parsed.data;
 
   try {
     await prisma.subscriptionMember.update({
-      where: { id: memberId },
-      data: { shareWeight: weight },
+      where: { id: member.id },
+      data: { shareWeight: money(shareWeight) }, // Regola 1
     });
   } catch (err) {
     // P2025: il membro è stato rimosso fra la lettura e la scrittura.
@@ -250,7 +254,7 @@ export async function toggleMemberSettled(
   const settled = !member.settled;
   try {
     await prisma.subscriptionMember.update({
-      where: { id: memberId },
+      where: { id: member.id },
       data: { settled, settledAt: settled ? new Date() : null },
     });
   } catch (err) {
@@ -267,7 +271,7 @@ export async function removeMember(memberId: string): Promise<ActionResult<null>
   const member = owned.data;
 
   try {
-    await prisma.subscriptionMember.delete({ where: { id: memberId } });
+    await prisma.subscriptionMember.delete({ where: { id: member.id } });
   } catch (err) {
     if (isPrismaError(err, "P2025")) return { ok: false, error: MEMBER_NOT_FOUND_ERROR };
     throw err;
@@ -335,11 +339,18 @@ export async function countPendingInvites(): Promise<number> {
 }
 
 export async function respondToInvite(
-  memberId: string,
-  accept: boolean,
+  rawMemberId: string,
+  rawAccept: boolean,
 ): Promise<ActionResult<null>> {
   const user = await getSessionUser();
   if (!user) return { ok: false, error: SESSION_EXPIRED_ERROR };
+
+  const parsed = parseInput(respondToInviteSchema, {
+    memberId: rawMemberId,
+    accept: rawAccept,
+  });
+  if (!parsed.ok) return parsed;
+  const { memberId, accept } = parsed.data;
   const email = (user.email ?? "").toLowerCase();
 
   const member = await prisma.subscriptionMember.findUnique({
@@ -358,12 +369,12 @@ export async function respondToInvite(
       update: {},
     });
     await prisma.subscriptionMember.update({
-      where: { id: memberId },
+      where: { id: member.id },
       data: { status: "ACCEPTED", userId: user.id },
     });
   } else {
     await prisma.subscriptionMember.update({
-      where: { id: memberId },
+      where: { id: member.id },
       data: { status: "DECLINED" },
     });
   }

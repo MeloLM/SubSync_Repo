@@ -12,15 +12,44 @@ Nodo padre: [[Index]]
 Le Server Action degli abbonamenti sono l'unico punto di scrittura sull'entità.
 Ogni mutazione esegue in sequenza:
 
-1. verifica di ownership sull'utente corrente
-2. normalizzazione dell'importo in `Decimal` e della data a mezzanotte UTC
-3. scrittura
-4. `revalidatePath` sulle viste dipendenti
+1. sessione valida
+2. validazione dell'input con gli schemi di `lib/validation/` (vedi sotto)
+3. verifica di ownership: dell'abbonamento e, se indicata, della categoria
+4. normalizzazione dell'importo in `Decimal` e della data a mezzanotte UTC
+5. scrittura
+6. `revalidatePath` sulle viste dipendenti
 
 Creazione, modifica, disdetta e riattivazione restituiscono un `ActionResult`
 (`SubscriptionDTO` per creazione e modifica, nessun payload per le altre due): un
 abbonamento assente o di un altro utente, o una sessione scaduta, tornano come
 messaggio e non come eccezione. Convenzione in [[Motore_Regole_NextJS]].
+
+### Regole di validazione
+Valgono per creazione e modifica; un input fuori regola torna come messaggio, senza
+scrivere nulla. Convenzione in [[Motore_Regole_NextJS]].
+
+| Campo | Regola |
+| ----- | ------ |
+| nome | da 1 a 100 caratteri dopo il trim |
+| importo | decimale maggiore di zero, al massimo due decimali, fino a 1.000.000 |
+| valuta | solo EUR o USD (omessa in creazione = EUR) |
+| ciclo | un valore dell'enum (mensile, annuale) |
+| data di rinnovo | formato `AAAA-MM-GG`, giorno realmente esistente, non prima di oggi (UTC) |
+| IVA e percentuali fiscali | tra 0 e 100 |
+| categoria | assente, di sistema o dell'utente: quella di **un altro utente** è rifiutata, perché la sola chiave esterna non lo impedisce |
+
+Due di queste regole chiudono guasti concreti. Una valuta malformata, salvata,
+faceva lanciare `RangeError` alla formattazione e mandava in errore la dashboard. Una
+data di rinnovo nel passato remoto faceva creare al cron un pagamento per ogni ciclo
+arretrato (dal 2015 sarebbero circa 140 in una notte).
+
+⚠️ **La modifica confronta la data con quella salvata.** Il form di modifica rimanda
+sempre la data attuale: se è già trascorsa (rinnovo non ancora avanzato dal cron,
+abbonamento disdetto), un controllo cieco bloccherebbe anche il cambio del solo nome. Una
+data **uguale** a quella salvata passa; una **diversa** deve essere di oggi o futura.
+
+La validazione protegge l'ingresso dei dati, non quelli già presenti: un abbonamento
+salvato prima di questo controllo con una data remota resta com'è.
 
 Le letture (elenco e singolo) passano dal layer memoizzato descritto in
 [[Database_Tabelle_e_Modelli_Prisma]] e ritornano DTO già serializzabili.

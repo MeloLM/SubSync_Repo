@@ -24,6 +24,10 @@ Lo schema (vedi [[Database_Tabelle_e_Modelli_Prisma]]) porta già su ogni `Subsc
 | detraibilità dell'IVA | percentuale di IVA recuperabile |
 | tipo di documento | fattura, ricevuta, nessuno |
 
+Aliquota, deducibilità e detraibilità sono validate lato server fra 0 e 100, e una
+categoria indicata deve essere di sistema o dell'utente: le regole sono in
+[[Gestione_Pagamenti_e_Rinnovi]].
+
 Il form di [[Gestione_Pagamenti_e_Rinnovi]] scrive già questi campi, e
 [[Lettura_Scontrini_OCR_Gemini]] prova a dedurre aliquota, lordo e tipo documento dalla
 ricevuta.
