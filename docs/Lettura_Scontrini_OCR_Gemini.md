@@ -14,7 +14,9 @@ utente rilascia l'immagine nella dropzone
         ↓
 compressione client-side su canvas
         ↓
-Server Action ──> Gemini (immagine inline + schema JSON vincolato)
+Server Action: sessione, poi validazione del payload
+        ↓
+Gemini (immagine inline + schema JSON vincolato)
         ↓
 esito tipizzato { ok, data } oppure { ok, error }
         ↓
@@ -43,6 +45,22 @@ throw vengono redatti e l'utente vedrebbe un messaggio generico. Gli errori di
 Gemini sono mappati in messaggi comprensibili, distinguendo chiave non valida,
 superamento del limite di richieste, problemi di rete, blocco per policy, risposta
 vuota o JSON non valido.
+
+### Sessione e payload controllati prima di Gemini
+Ogni chiamata al modello costa denaro, quindi la Server Action fa due controlli prima
+di raggiungerlo, entrambi con esito come valore (mai un throw):
+
+- **Sessione**: senza utente autenticato risponde «Sessione scaduta», come le altre
+  action sui dati. Lo scanner non è raggiungibile da chi non ha un account.
+- **Payload**: l'immagine deve essere un data URL JPEG, PNG o WebP, non oltre i 3 MB
+  decodificati (coerente con il limite di 4mb delle Server Action, vedi
+  [[Motore_Regole_NextJS]]), con base64 ben formato e con i primi byte che corrispondono
+  al tipo dichiarato: un testo spacciato per PNG viene rifiutato. Il base64 nudo senza
+  prefisso non è più ammesso. La logica è un helper puro e testato, in `lib/validation/`.
+
+La UI non cambia: la dropzone già mostra `error` in un toast. Il controllo di frequenza
+(rate limiting) non c'è ancora: un utente autenticato può chiamare lo scanner senza
+tetto, vedi il backlog in `TODO.md`.
 
 ### Compressione lato client
 L'immagine viene ridotta su canvas prima dell'invio. Non è un'ottimizzazione

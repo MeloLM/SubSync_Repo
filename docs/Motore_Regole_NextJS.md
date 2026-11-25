@@ -103,6 +103,11 @@ toccare il database, con schemi zod raccolti in `lib/validation/`, un file per d
 - Gli enum derivano dallo schema Prisma: un valore nuovo nel database è accettato senza
   una seconda lista da tenere allineata.
 
+Il **payload dell'immagine** dello scanner non è una mutazione di dominio ma segue lo
+stesso principio, con un helper puro in `lib/validation/` (tipo, dimensione, firma dei
+byte): si ferma prima di spendere una chiamata a pagamento. Vedi
+[[Lettura_Scontrini_OCR_Gemini]].
+
 Applicato a [[Gestione_Pagamenti_e_Rinnovi]] e [[Condivisione_Spese_e_Gruppi]]; lo stesso
 schema, con unione discriminata propria, regge lo scanner di
 [[Lettura_Scontrini_OCR_Gemini]] e gli esiti di [[Auth_Utenti_e_Sessioni_Supabase]].

@@ -340,6 +340,8 @@ Restano fuori i punti d'ingresso che non sono quelle mutazioni._
 - [ ] Validare l'**output di Gemini** dello scanner con gli stessi schemi, invece di affidarsi al solo ritaglio lato form → [[Lettura_Scontrini_OCR_Gemini]]
 - [ ] Il **cron dei rinnovi** recupera i cicli arretrati con un tetto tecnico di 600 iterazioni per abbonamento, che è un salvagente e non una politica: per un mensile sono cinquant'anni di `PaymentLog`. Gli schemi chiudono l'ingresso; cosa fare di un arretrato già presente nei dati va deciso → [[Gestione_Pagamenti_e_Rinnovi]]
 - [ ] Limitare la frequenza delle mutazioni (rate limiting): oggi un utente autenticato può invitare o creare senza tetto
+- [x] 🔐 Scanner Gemini: **sessione obbligatoria** (senza utente `{ ok: false }` «Sessione scaduta», prima di qualsiasi chiamata a pagamento) e payload validato — solo JPEG/PNG/WebP, max 3 MB decodificati (coerente con `bodySizeLimit` 4mb), base64 ben formato, firma dei byte coerente con il tipo → [[Lettura_Scontrini_OCR_Gemini]]
+- [ ] 🔐 **Rate limit dello scanner** (e delle altre action a costo): non implementato, con la sessione obbligatoria resta il tetto di spesa mancante. Due strade — servizio esterno (es. Upstash Redis con sliding window, a basso costo e basso attrito su Vercel, ma una dipendenza e un servizio in più) oppure tabella su database (nessun servizio nuovo e contatori ispezionabili, ma una migrazione e una scrittura per chiamata sul database di produzione) — la scelta è dell'utente → [[Lettura_Scontrini_OCR_Gemini]]
 
 ### 🧪 Strumenti di sviluppo
 

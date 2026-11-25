@@ -2,7 +2,9 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 
+import { getSessionUser, SESSION_EXPIRED_ERROR } from "@/lib/action-result";
 import type { BillingCycle, FiscalDocumentType } from "@/lib/generated/prisma";
+import { parseReceiptImage } from "@/lib/validation/receipt";
 
 /**
  * Struttura dati estratta da uno scontrino/fattura dal modello Vision.
@@ -116,27 +118,26 @@ const SYSTEM_INSTRUCTION =
   "una ricevuta, INVOICE per una fattura con partita IVA o dati fiscali del fornitore). " +
   "Rispondi esclusivamente con l'oggetto JSON conforme allo schema.";
 
-/** Estrae `mimeType` + base64 puro sia da un data URL sia da base64 grezzo. */
-function parseImagePayload(input: string): { mimeType: string; data: string } {
-  const match = /^data:(.+?);base64,(.*)$/s.exec(input.trim());
-  if (match) return { mimeType: match[1], data: match[2] };
-  // Fallback: base64 già "nudo" → assume JPEG.
-  return { mimeType: "image/jpeg", data: input.trim() };
-}
-
 /**
  * 👁️ Estrae i dati dell'abbonamento da un'immagine (scontrino/fattura) tramite
  * Google Gemini (`gemini-2.5-flash`). L'output è vincolato via `responseSchema`
  * così da alimentare direttamente l'auto-fill del form.
+ *
+ * Ogni chiamata costa: serve una sessione valida (come per le altre action sui
+ * dati) e il payload è validato PRIMA di raggiungere Gemini (tipo, dimensione,
+ * firma dei byte: `lib/validation/receipt.ts`).
  *
  * Richiede `GEMINI_API_KEY` in `.env.local` (server-only).
  */
 export async function extractDataFromReceipt(
   base64Image: string,
 ): Promise<ReceiptExtractionResult> {
-  if (!base64Image) {
-    return { ok: false, error: "Immagine mancante: nessun dato da estrarre." };
-  }
+  const user = await getSessionUser();
+  if (!user) return { ok: false, error: SESSION_EXPIRED_ERROR };
+
+  const image = parseReceiptImage(base64Image);
+  if (!image.ok) return image;
+  const { mimeType, data } = image.data;
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -145,8 +146,6 @@ export async function extractDataFromReceipt(
       error: "Servizio AI non configurato (GEMINI_API_KEY mancante).",
     };
   }
-
-  const { mimeType, data } = parseImagePayload(base64Image);
 
   // Chiamata al modello isolata in try/catch: gli errori di rete/API (401/429/…)
   // diventano `error` tipizzati anziché eccezioni redatte in produzione.
