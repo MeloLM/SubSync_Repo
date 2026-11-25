@@ -17,10 +17,14 @@ export function MobileNav({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
-  // Chiudi automaticamente quando si naviga.
-  useEffect(() => {
+  // Chiudi automaticamente quando si naviga. Pattern React "adjusting state while
+  // rendering" (al posto di un effect che chiama setState): al cambio di rotta lo
+  // stato si aggiorna nello stesso render, senza un passaggio intermedio col menu aperto.
+  const [prevPathname, setPrevPathname] = useState(pathname);
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname);
     setOpen(false);
-  }, [pathname]);
+  }
 
   // Esc per chiudere.
   useEffect(() => {
