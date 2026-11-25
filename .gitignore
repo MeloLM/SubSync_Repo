@@ -32,3 +32,6 @@ next-env.d.ts
 
 # obsidian (configurazione visiva del vault: locale per ogni sviluppatore)
 /.obsidian/
+
+# claude code (configurazione locale della sessione: non versionata)
+/.claude/

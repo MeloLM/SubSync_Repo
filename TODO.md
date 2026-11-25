@@ -333,6 +333,7 @@ modificabile. Restano due evoluzioni con conseguenze fuori dalla pagina._
 
 - [x] **Seed di dati finti** per il collaudo visivo: 13 abbonamenti costruiti per popolare ogni vista del grafico, con storico, un disdetto e un aumento di prezzo
 - [ ] ⚠️ **In locale si lavora sul database di produzione**: `.env.local` punta `DATABASE_URL` al pooler Supabase, quindi `NODE_ENV === "development"` è vero mentre si è collegati ai dati veri. Il seed se ne difende con un secondo cancello; va valutato se istituzionalizzare l'avvertenza in `AI_law_subsync.md`
+- [ ] ⚠️ Prima del lancio: database di produzione separato dalla sandbox e migrazioni tolte dallo script build
 
 ---
 
